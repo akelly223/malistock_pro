@@ -1,0 +1,83 @@
+# -------------------------------------------------------------------------
+# Fichiers système et éditeurs
+# -------------------------------------------------------------------------
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code (Recommandé pour éviter de partager vos configurations locales)
+.vscode/
+
+# -------------------------------------------------------------------------
+# Flutter / Dart / Pub (Général)
+# -------------------------------------------------------------------------
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symboles et Obfuscation
+app.*.symbols
+app.*.map.json
+
+# -------------------------------------------------------------------------
+# Plateformes Desktop (Indispensable pour votre projet)
+# -------------------------------------------------------------------------
+
+# Windows Desktop
+/**/windows/flutter/ephemeral/
+/**/windows/flutter/generated_plugin_registrant.h
+/**/windows/flutter/generated_plugin_registrant.cc
+/*.exe
+/*.dll
+
+# macOS Desktop
+/**/macos/Flutter/ephemeral/
+/**/macos/Flutter/GeneratedPluginRegistrant.swift
+/**/macos/Pods/
+/macos/.generated/
+
+# Linux Desktop
+/**/linux/flutter/ephemeral/
+/**/linux/flutter/generated_plugin_registrant.h
+/**/linux/flutter/generated_plugin_registrant.cc
+
+# -------------------------------------------------------------------------
+# Plateformes Mobiles et Web (Au cas où)
+# -------------------------------------------------------------------------
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS
+**/ios/Flutter/.last_build_id
+
+# Web
+.web/
+
+# -------------------------------------------------------------------------
+# Sécurité et Secrets
+# -------------------------------------------------------------------------
+.env
+*.env

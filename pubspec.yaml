@@ -1,0 +1,65 @@
+name: malistock_pro
+description: "Logiciel de gestion commerciale desktop pour commerçants - Mali"
+publish_to: 'none'
+version: 3.3.0+3
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Base de données locale
+  drift: ^2.22.1
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # PDF
+  pdf: ^3.11.0
+  printing: ^5.13.1
+
+  # Sécurité / hash mot de passe
+  crypto: ^3.0.5
+
+  # Sauvegarde / sélection de fichiers
+  archive: ^3.6.1
+  file_picker: ^8.1.4
+
+  # Graphiques dashboard
+  fl_chart: ^0.68.0
+
+  # Import Excel
+  excel: ^4.0.6
+
+  # Utilitaires
+  intl: ^0.20.2
+  uuid: ^4.4.0
+  collection: ^1.18.0
+
+  # Icônes
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
+
+  # Génération de code
+  build_runner: ^2.4.13
+  drift_dev: ^2.22.1
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true

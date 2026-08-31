@@ -1,0 +1,94 @@
+CONTRAT DE LICENCE D'UTILISATION
+
+StockMali
+
+Copyright © MALI_CODE CENTER. Tous droits réservés.
+
+---
+
+Merci d'avoir choisi StockMali, une solution conçue pour accompagner
+les commerçants, libraires, grossistes et détaillants dans la gestion
+quotidienne de leurs activités.
+
+En installant, copiant ou utilisant ce logiciel, vous acceptez les
+conditions suivantes :
+
+1. OBJET DE LA LICENCE
+
+Cette licence vous accorde un droit d'utilisation du logiciel StockMali
+pour les besoins internes de votre activité commerciale.
+
+Le logiciel permet notamment :
+- La gestion des articles et du stock
+- La gestion des clients et fournisseurs
+- La gestion des achats et ventes
+- La création de devis et factures
+- Le suivi des dettes clients
+- L'analyse des ventes et statistiques
+
+2. PROPRIÉTÉ INTELLECTUELLE
+
+Le logiciel StockMali est développé et édité par MALI_CODE CENTER.
+Le logiciel, son interface, son code source, sa documentation, son logo
+et ses éléments graphiques sont protégés par les lois relatives à la
+propriété intellectuelle.
+
+Toute reproduction, modification, revente, décompilation ou
+redistribution non autorisée est strictement interdite sans l'accord
+écrit de MALI_CODE CENTER.
+
+3. DONNÉES UTILISATEUR
+
+Les données créées par l'utilisateur (articles, clients, fournisseurs,
+factures, achats, ventes, statistiques, etc.) restent la propriété
+exclusive de l'utilisateur.
+
+Par défaut :
+- Les données sont enregistrées localement sur votre ordinateur.
+- Aucune donnée n'est transmise à un serveur externe sans autorisation.
+- Aucune donnée commerciale n'est partagée avec des tiers.
+
+4. SAUVEGARDE DES DONNÉES
+
+Il est fortement recommandé d'effectuer régulièrement des sauvegardes
+à l'aide de la fonctionnalité intégrée au logiciel.
+L'utilisateur est responsable de la conservation de ses sauvegardes.
+
+5. LIMITATION DE RESPONSABILITÉ
+
+MALI_CODE CENTER ne pourra être tenu responsable :
+- D'une panne matérielle
+- D'une défaillance du système d'exploitation
+- D'un virus informatique
+- D'une mauvaise manipulation du logiciel
+- D'une suppression accidentelle de données
+- D'une absence de sauvegarde effectuée par l'utilisateur
+
+6. SUPPORT ET MISES À JOUR
+
+Selon la formule choisie lors de l'acquisition du logiciel,
+l'utilisateur peut bénéficier :
+- D'une assistance technique
+- De corrections de bugs
+- De mises à jour fonctionnelles
+- D'améliorations futures
+
+Les conditions de support peuvent évoluer selon les offres commerciales
+de MALI_CODE CENTER.
+
+7. ACCEPTATION
+
+En cliquant sur « J'accepte », vous reconnaissez avoir lu et compris
+les présentes conditions et acceptez l'ensemble des termes de cette
+licence.
+
+---
+
+Développé avec fierté au Mali
+
+MALI_CODE CENTER
+Solutions numériques pour les entreprises africaines.
+
+Version : 1.0.0
+
+Contact : mlcode223@gmail.com | +223 75 96 51 85
