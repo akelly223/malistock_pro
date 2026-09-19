@@ -1,25 +1,74 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../core/services/catalog_export_service.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../domain/entities/client.dart';
 import 'providers/client_provider.dart';
 
-class ClientsListScreen extends ConsumerWidget {
+class ClientsListScreen extends ConsumerStatefulWidget {
   const ClientsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClientsListScreen> createState() => _ClientsListScreenState();
+}
+
+class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
+  bool _isExporting = false;
+
+  Future<void> _exporterCsv(List<ClientEntity> clients) async {
+    setState(() => _isExporting = true);
+    try {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Enregistrer la liste des clients',
+        fileName: '${CatalogExportService.nomFichierSuggere('clients')}.csv',
+        allowedExtensions: ['csv'],
+      );
+      if (path == null) return;
+      final content = await CatalogExportService.clientsCsv(clients);
+      await File(path).writeAsString(content, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Liste enregistrée : $path')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur export CSV : $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final clientsAsync = ref.watch(filteredClientsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clients'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: AppButton(
+              label: 'Exporter CSV',
+              icon: Icons.file_download_outlined,
+              isOutlined: true,
+              isLoading: _isExporting,
+              onPressed: clientsAsync.valueOrNull == null ||
+                      clientsAsync.value!.isEmpty
+                  ? null
+                  : () => _exporterCsv(clientsAsync.value!),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: AppButton(

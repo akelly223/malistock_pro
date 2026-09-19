@@ -5,6 +5,7 @@ import 'startup_alert_trigger.dart';
 import 'auto_backup_trigger.dart';
 import 'startup_draft_checker.dart';
 import 'access_denied_trigger.dart';
+import 'widgets/file_menu_button.dart';
 
 /// Layout principal de l'application une fois connecté : sidebar fixe
 /// à gauche + zone de contenu scrollable à droite. Reçoit le contenu
@@ -40,6 +41,11 @@ class MainShell extends StatelessWidget {
             top: 16,
             right: 24,
             child: NotificationBell(),
+          ),
+          const Positioned(
+            top: 16,
+            right: 76,
+            child: FileMenuButton(),
           ),
           const StartupAlertTrigger(),
           const StartupDraftChecker(),

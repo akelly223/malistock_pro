@@ -1,19 +1,55 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../app/theme/app_text_styles.dart';
 import '../../app/providers/session_provider.dart';
 import '../../core/permissions/permissions.dart';
+import '../../core/services/catalog_export_service.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../domain/entities/article.dart';
 import 'providers/article_provider.dart';
 import 'widgets/article_card.dart';
 
-class ArticlesListScreen extends ConsumerWidget {
+class ArticlesListScreen extends ConsumerStatefulWidget {
   const ArticlesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArticlesListScreen> createState() =>
+      _ArticlesListScreenState();
+}
+
+class _ArticlesListScreenState extends ConsumerState<ArticlesListScreen> {
+  bool _isExporting = false;
+
+  Future<void> _exporterCsv(List<ArticleEntity> articles) async {
+    setState(() => _isExporting = true);
+    try {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Enregistrer la liste des articles',
+        fileName: '${CatalogExportService.nomFichierSuggere('articles')}.csv',
+        allowedExtensions: ['csv'],
+      );
+      if (path == null) return;
+      final content = await CatalogExportService.articlesCsv(articles);
+      await File(path).writeAsString(content, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Liste enregistrée : $path')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur export CSV : $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final articlesAsync = ref.watch(filteredArticlesProvider);
     final utilisateur = ref.watch(sessionProvider);
     final peutGererCatalogue =
@@ -23,6 +59,19 @@ class ArticlesListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Articles'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: AppButton(
+              label: 'Exporter CSV',
+              icon: Icons.file_download_outlined,
+              isOutlined: true,
+              isLoading: _isExporting,
+              onPressed: articlesAsync.valueOrNull == null ||
+                      articlesAsync.value!.isEmpty
+                  ? null
+                  : () => _exporterCsv(articlesAsync.value!),
+            ),
+          ),
           if (peutGererCatalogue) ...[
             Padding(
               padding: const EdgeInsets.only(right: 8),

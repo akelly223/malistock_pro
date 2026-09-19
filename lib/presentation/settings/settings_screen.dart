@@ -10,6 +10,7 @@ import '../../core/constants/app_identity.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/services/backup_service.dart';
+import '../../core/services/data_location_service.dart';
 import '../../core/services/logo_service.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/widgets/access_denied_view.dart';
@@ -51,6 +52,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   bool _isLoading = false;
   bool _isInitialised = false;
   bool _isBackupRunning = false;
+  bool _isEmplacementLoading = false;
   bool _isLogoLoading = false;
   bool _isSignatureLoading = false;
   bool _isCachetLoading = false;
@@ -342,6 +344,119 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       await Future.delayed(const Duration(seconds: 3));
       exit(0);
     }
+  }
+
+  // ── Emplacement des données ─────────────────────────────────────
+
+  Future<({String chemin, bool estPersonnalise})> _infosEmplacement() async {
+    final personnalise = await DataLocationService.getCheminPersonnalise();
+    final chemin =
+        personnalise ?? await DataLocationService.getCheminParDefaut();
+    return (chemin: chemin, estPersonnalise: personnalise != null);
+  }
+
+  Future<void> _changerEmplacementDonnees() async {
+    final dossier = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Choisir un dossier (ex: Google Drive, OneDrive, Dropbox)',
+    );
+    if (dossier == null || !mounted) return;
+
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Déplacer les données vers ce dossier ?'),
+        content: const Text(
+          'Vos données (base, logo, signature, cachet, sauvegardes) seront '
+          'copiées dans ce dossier si besoin. Si vous choisissez un dossier '
+          'synchronisé par un service comme Google Drive, OneDrive ou '
+          'Dropbox, vos données seront accessibles depuis un autre '
+          'ordinateur lié au même dossier, une fois la synchronisation '
+          'terminée.\n\n'
+          'IMPORTANT : n\'ouvrez jamais l\'application sur deux ordinateurs '
+          'en même temps avec ce dossier — attendez toujours que la '
+          'synchronisation soit terminée avant d\'ouvrir sur un autre '
+          'poste, sous peine de corrompre vos données.\n\n'
+          'L\'application se fermera après le changement ; relancez-la '
+          'ensuite.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler')),
+          AppButton(
+            label: 'Continuer',
+            isDanger: true,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true || !mounted) return;
+
+    setState(() => _isEmplacementLoading = true);
+    try {
+      final db = ref.read(databaseProvider);
+      await db.customStatement('PRAGMA wal_checkpoint(FULL)');
+      await db.close();
+      final resultat = await DataLocationService.deplacerVers(dossier);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(resultat.message),
+        backgroundColor: resultat.succes ? null : AppColors.danger,
+        duration: const Duration(seconds: 6),
+      ));
+      if (resultat.succes) {
+        await Future.delayed(const Duration(seconds: 3));
+        exit(0);
+      } else {
+        setState(() => _isEmplacementLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isEmplacementLoading = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      }
+    }
+  }
+
+  Future<void> _reinitialiserEmplacementDonnees() async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Revenir à l\'emplacement local par défaut ?'),
+        content: const Text(
+          'L\'application utilisera à nouveau le dossier local par défaut. '
+          'Les données du dossier personnalisé ne seront ni supprimées ni '
+          'recopiées automatiquement. L\'application se fermera ensuite ; '
+          'relancez-la pour continuer.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler')),
+          AppButton(
+            label: 'Continuer',
+            isDanger: true,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true || !mounted) return;
+
+    setState(() => _isEmplacementLoading = true);
+    final db = ref.read(databaseProvider);
+    await db.customStatement('PRAGMA wal_checkpoint(FULL)');
+    await db.close();
+    await DataLocationService.reinitialiser();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Emplacement réinitialisé.'),
+      duration: Duration(seconds: 3),
+    ));
+    await Future.delayed(const Duration(seconds: 3));
+    exit(0);
   }
 
   // ── Build ────────────────────────────────────────────────────────
@@ -674,6 +789,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               error: (_, __) => const SizedBox.shrink(),
             );
           }),
+          const SizedBox(height: 36),
+          _SectionTitle('Emplacement des données'),
+          Text(
+            'Par défaut, vos données restent uniquement sur cet ordinateur. '
+            'Vous pouvez les déplacer vers un dossier synchronisé (Google '
+            'Drive, OneDrive, Dropbox...) pour y accéder depuis plusieurs '
+            'ordinateurs — un seul poste à la fois doit avoir l\'application '
+            'ouverte, le temps que la synchronisation se fasse.',
+            style: AppTextStyles.caption,
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<({String chemin, bool estPersonnalise})>(
+            future: _infosEmplacement(),
+            builder: (context, snapshot) {
+              final infos = snapshot.data;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (infos != null) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          infos.estPersonnalise
+                              ? Icons.cloud_outlined
+                              : Icons.laptop_mac_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            infos.chemin,
+                            style: AppTextStyles.caption,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      AppButton(
+                        label: 'Changer l\'emplacement',
+                        icon: Icons.drive_folder_upload_outlined,
+                        isOutlined: true,
+                        isLoading: _isEmplacementLoading,
+                        onPressed: _changerEmplacementDonnees,
+                      ),
+                      if (infos?.estPersonnalise == true)
+                        AppButton(
+                          label: 'Revenir à l\'emplacement local',
+                          icon: Icons.restore_rounded,
+                          isOutlined: true,
+                          isLoading: _isEmplacementLoading,
+                          onPressed: _reinitialiserEmplacementDonnees,
+                        ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 36),
           _SectionTitle('Mises à jour'),
           Text('Version actuelle : ${AppIdentity.version}',

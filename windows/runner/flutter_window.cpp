@@ -1,8 +1,19 @@
 #include "flutter_window.h"
 
+#include <flutter/encodable_value.h>
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "utils.h"
+
+namespace {
+// Doit correspondre exactement au nom utilisé côté Dart
+// (native_channel_service.dart).
+constexpr char kNativeChannelName[] = "malistock/native";
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -65,6 +76,24 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    case WM_COPYDATA: {
+      // Une autre tentative de lancement de MaliStock Pro (double-clic sur
+      // un .mstk pendant que cette instance tourne déjà) a transmis un
+      // chemin de fichier via main.cpp (ForwardToExistingInstance).
+      auto* cds = reinterpret_cast<COPYDATASTRUCT*>(lparam);
+      if (cds != nullptr && cds->lpData != nullptr && flutter_controller_) {
+        auto file_path =
+            std::wstring(reinterpret_cast<wchar_t*>(cds->lpData));
+        flutter::MethodChannel<flutter::EncodableValue> channel(
+            flutter_controller_->engine()->messenger(), kNativeChannelName,
+            &flutter::StandardMethodCodec::GetInstance());
+        channel.InvokeMethod(
+            "openFileRequested",
+            std::make_unique<flutter::EncodableValue>(
+                Utf8FromUtf16(file_path.c_str())));
+      }
+      return TRUE;
+    }
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);

@@ -3,6 +3,7 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
 import '../../data/local/database.dart';
+import '../utils/folder_copy_utils.dart';
 
 /// Résultat d'une opération de sauvegarde ou restauration, pour
 /// remonter un message clair à l'utilisateur sans exposer de détails
@@ -139,7 +140,7 @@ class BackupService {
       if (await dataDir.exists()) {
         final dossierSecours = Directory(
             '${dataDir.path}_avant_restauration_${_formatHorodatage(DateTime.now())}');
-        await _copierDossier(dataDir, dossierSecours);
+        await copierDossierDonneesApp(dataDir, dossierSecours);
         await _supprimerDossierAvecRetry(dataDir);
       }
 
@@ -179,23 +180,6 @@ class BackupService {
         succes: false,
         message: 'Erreur lors de la restauration : $e',
       );
-    }
-  }
-
-  /// Copie récursivement le contenu d'un dossier vers un autre,
-  /// fichier par fichier — utilisé à la place d'un renommage de
-  /// dossier, qui échoue sur Windows si un sous-fichier est encore
-  /// verrouillé par un autre processus.
-  static Future<void> _copierDossier(Directory source, Directory cible) async {
-    await cible.create(recursive: true);
-    for (final entite in source.listSync(recursive: false)) {
-      final nom = p.basename(entite.path);
-      final cheminCible = p.join(cible.path, nom);
-      if (entite is Directory) {
-        await _copierDossier(entite, Directory(cheminCible));
-      } else if (entite is File) {
-        await entite.copy(cheminCible);
-      }
     }
   }
 

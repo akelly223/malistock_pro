@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/session_provider.dart';
+import '../providers/active_container_provider.dart';
 import '../../core/permissions/permissions.dart';
 import '../../core/constants/db_constants.dart';
 import '../../presentation/shell/main_shell.dart';
 import '../../presentation/auth/login_screen.dart';
+import '../../presentation/container/accueil_screen.dart';
 import '../../presentation/dashboard/dashboard_screen.dart';
 import '../../presentation/articles/articles_list_screen.dart';
 import '../../presentation/articles/article_form_screen.dart';
@@ -54,6 +56,7 @@ import '../../domain/entities/document_type.dart';
 class _SessionRefreshListenable extends ChangeNotifier {
   _SessionRefreshListenable(Ref ref) {
     ref.listen(sessionProvider, (_, __) => notifyListeners());
+    ref.listen(activeContainerProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -63,13 +66,35 @@ class _SessionRefreshListenable extends ChangeNotifier {
 /// le refus est complètement silencieux pour l'utilisateur.
 final accessDeniedRouteProvider = StateProvider<String?>((ref) => null);
 
+/// Clé du Navigator racine de GoRouter, exposée pour que
+/// `NativeChannelListener` puisse déclencher une navigation/un
+/// dialogue depuis un événement natif (réception `WM_COPYDATA`) qui ne
+/// dispose d'aucun `BuildContext` de départ.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshListenable = _SessionRefreshListenable(ref);
 
   return GoRouter(
-    initialLocation: '/login',
+    navigatorKey: rootNavigatorKey,
+    initialLocation: '/accueil',
     refreshListenable: refreshListenable,
     redirect: (context, state) {
+      // Aucun dossier .mstk ouvert : seul l'écran d'accueil est
+      // accessible. C'est déterminant AVANT la logique de connexion
+      // ci-dessous, car /login interroge la base (hasAdminProvider)
+      // dès son affichage — elle doit donc déjà pointer sur un
+      // conteneur ouvert.
+      final conteneurOuvert = ref.read(activeContainerProvider) != null;
+      final vaVersAccueil = state.matchedLocation == '/accueil';
+
+      // Tant qu'aucun conteneur n'est ouvert, seul /accueil est
+      // atteignable : on s'arrête ici pour ne jamais retomber dans la
+      // logique de connexion ci-dessous (sinon boucle de redirection
+      // /accueil <-> /login, /login exigeant lui aussi une garde).
+      if (!conteneurOuvert) return vaVersAccueil ? null : '/accueil';
+      if (vaVersAccueil) return '/login';
+
       final user = ref.read(sessionProvider);
       final isConnecte = user != null;
       final vaVersLogin = state.matchedLocation == '/login';
@@ -95,6 +120,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/accueil',
+        builder: (context, state) => const AccueilScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),

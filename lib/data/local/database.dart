@@ -3,7 +3,6 @@ import 'dart:developer' as dev;
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import 'tables/users_table.dart';
 import 'tables/stores_table.dart';
@@ -49,6 +48,8 @@ import 'daos/inventories_dao.dart';
 
 import '../../core/constants/app_identity.dart';
 import '../../core/constants/db_constants.dart';
+import '../../core/container/active_container_context.dart';
+import '../../core/services/data_location_service.dart';
 
 part 'database.g.dart';
 
@@ -710,8 +711,9 @@ class AppDatabase extends _$AppDatabase {
   // ─── Chemin de la base ──────────────────────────────────────────
 
   static Future<String> getDatabaseDirectory() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return p.join(dir.path, 'MaliStockPro');
+    final dossierConteneurOuvert = ActiveContainerContext.dossierTravailCourant;
+    if (dossierConteneurOuvert != null) return dossierConteneurOuvert;
+    return DataLocationService.getCheminEffectif();
   }
 }
 

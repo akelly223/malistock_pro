@@ -1,7 +1,7 @@
 name: malistock_pro
 description: "Logiciel de gestion commerciale desktop pour commerçants - Mali"
 publish_to: 'none'
-version: 3.3.0+3
+version: 3.5.0+5
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -30,6 +30,9 @@ dependencies:
 
   # Sécurité / hash mot de passe
   crypto: ^3.0.5
+
+  # Format de fichier .mstk (chiffrement du conteneur de données)
+  cryptography: ^2.7.0
 
   # Sauvegarde / sélection de fichiers
   archive: ^3.6.1

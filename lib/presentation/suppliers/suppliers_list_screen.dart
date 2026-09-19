@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/providers/repository_providers.dart';
 import '../../app/providers/session_provider.dart';
+import '../../core/services/catalog_export_service.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/empty_state.dart';
@@ -25,8 +28,42 @@ final supplierByIdProvider =
   return repo.getSupplierById(id);
 });
 
-class SuppliersListScreen extends ConsumerWidget {
+class SuppliersListScreen extends ConsumerStatefulWidget {
   const SuppliersListScreen({super.key});
+
+  @override
+  ConsumerState<SuppliersListScreen> createState() =>
+      _SuppliersListScreenState();
+}
+
+class _SuppliersListScreenState extends ConsumerState<SuppliersListScreen> {
+  bool _isExporting = false;
+
+  Future<void> _exporterCsv(List<SupplierEntity> suppliers) async {
+    setState(() => _isExporting = true);
+    try {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Enregistrer la liste des fournisseurs',
+        fileName:
+            '${CatalogExportService.nomFichierSuggere('fournisseurs')}.csv',
+        allowedExtensions: ['csv'],
+      );
+      if (path == null) return;
+      final content = await CatalogExportService.suppliersCsv(suppliers);
+      await File(path).writeAsString(content, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Liste enregistrée : $path')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur export CSV : $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
 
   Future<void> _afficherFormulaire(
       BuildContext context, WidgetRef ref, SupplierEntity? existant) async {
@@ -91,7 +128,7 @@ class SuppliersListScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final utilisateur = ref.watch(sessionProvider);
     if (!Permissions.peutVoirFournisseurs(utilisateur)) {
       return const AccessDeniedView(titre: 'Fournisseurs');
@@ -103,6 +140,19 @@ class SuppliersListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Fournisseurs'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: AppButton(
+              label: 'Exporter CSV',
+              icon: Icons.file_download_outlined,
+              isOutlined: true,
+              isLoading: _isExporting,
+              onPressed: suppliersAsync.valueOrNull == null ||
+                      suppliersAsync.value!.isEmpty
+                  ? null
+                  : () => _exporterCsv(suppliersAsync.value!),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: AppButton(

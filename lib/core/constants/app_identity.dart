@@ -14,7 +14,7 @@ class AppIdentity {
 
   static const String nomApp = 'MaliStock Pro';
   static const String nomCourt = 'MaliStock Pro';
-  static const String version = '3.3.0';
+  static const String version = '3.5.0';
   static const int schemaVersion = 19;
   static const String description =
       'Solution de gestion commerciale conçue pour les commerçants, '
