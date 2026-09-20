@@ -55,13 +55,19 @@ abstract final class MstkCrypto {
   static bool _aUnMotDePasse(String? motDePasse) =>
       motDePasse != null && motDePasse.isNotEmpty;
 
+  /// [iterations] : nombre d'itérations PBKDF2 à utiliser — toujours
+  /// [iterationsPbkdf2] (valeur actuelle) pour un nouveau chiffrement,
+  /// mais DOIT être la valeur lue dans l'en-tête du fichier pour un
+  /// déchiffrement, afin qu'un futur changement de cette constante ne
+  /// rende jamais illisibles les fichiers `.mstk` déjà créés.
   static Future<SecretKey> _deriverCle({
     required String? motDePasse,
     required Uint8List sel,
+    int iterations = iterationsPbkdf2,
   }) {
     if (_aUnMotDePasse(motDePasse)) {
       return Pbkdf2.hmacSha256(
-        iterations: iterationsPbkdf2,
+        iterations: iterations,
         bits: _longueurCle * 8,
       ).deriveKeyFromPassword(password: motDePasse!, nonce: sel);
     }
@@ -114,7 +120,12 @@ abstract final class MstkCrypto {
           'Ce fichier est protégé par un mot de passe.');
     }
 
-    final cle = await _deriverCle(motDePasse: motDePasse, sel: header.sel);
+    final cle = await _deriverCle(
+      motDePasse: motDePasse,
+      sel: header.sel,
+      iterations:
+          header.kdfIterations > 0 ? header.kdfIterations : iterationsPbkdf2,
+    );
     final boite = SecretBox(
       ciphertext,
       nonce: header.nonce,

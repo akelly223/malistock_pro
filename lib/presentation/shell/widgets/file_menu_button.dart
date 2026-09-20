@@ -8,19 +8,39 @@ import '../../container/container_actions.dart';
 /// Enregistrer une copie sous, Sauvegarde, Fermer le dossier — les
 /// mêmes actions que l'écran d'accueil, disponibles pendant qu'un
 /// dossier est déjà ouvert.
-class FileMenuButton extends ConsumerWidget {
+class FileMenuButton extends ConsumerStatefulWidget {
   const FileMenuButton({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FileMenuButton> createState() => _FileMenuButtonState();
+}
+
+class _FileMenuButtonState extends ConsumerState<FileMenuButton> {
+  // Empêche un second clic (Fermer pendant une Sauvegarde en cours,
+  // par ex.) de lancer une deuxième opération sur le même conteneur
+  // .mstk pendant qu'une première est déjà en train d'écrire dessus.
+  bool _isBusy = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
       shape: const CircleBorder(),
       elevation: 2,
       child: PopupMenuButton<_FileMenuAction>(
         tooltip: 'Fichier',
-        icon: const Icon(Icons.description_outlined, color: AppColors.textSecondary),
-        onSelected: (action) => _executer(context, ref, action),
+        enabled: !_isBusy,
+        icon: _isBusy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: Padding(
+                  padding: EdgeInsets.all(1),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : const Icon(Icons.description_outlined, color: AppColors.textSecondary),
+        onSelected: (action) => _executer(action),
         itemBuilder: (context) => const [
           PopupMenuItem(
             value: _FileMenuAction.nouveau,
@@ -64,19 +84,24 @@ class FileMenuButton extends ConsumerWidget {
     );
   }
 
-  Future<void> _executer(
-      BuildContext context, WidgetRef ref, _FileMenuAction action) {
-    switch (action) {
-      case _FileMenuAction.nouveau:
-        return ContainerActions.nouveau(context, ref);
-      case _FileMenuAction.ouvrir:
-        return ContainerActions.ouvrir(context, ref);
-      case _FileMenuAction.sauvegarder:
-        return ContainerActions.sauvegarder(context, ref);
-      case _FileMenuAction.enregistrerSousCopie:
-        return ContainerActions.enregistrerSousCopie(context, ref);
-      case _FileMenuAction.fermer:
-        return ContainerActions.fermer(context, ref);
+  Future<void> _executer(_FileMenuAction action) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      switch (action) {
+        case _FileMenuAction.nouveau:
+          await ContainerActions.nouveau(context, ref);
+        case _FileMenuAction.ouvrir:
+          await ContainerActions.ouvrir(context, ref);
+        case _FileMenuAction.sauvegarder:
+          await ContainerActions.sauvegarder(context, ref);
+        case _FileMenuAction.enregistrerSousCopie:
+          await ContainerActions.enregistrerSousCopie(context, ref);
+        case _FileMenuAction.fermer:
+          await ContainerActions.fermer(context, ref);
+      }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
     }
   }
 }

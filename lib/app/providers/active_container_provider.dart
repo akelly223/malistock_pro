@@ -30,11 +30,17 @@ class ActiveContainerNotifier extends StateNotifier<OpenedMstkContainer?> {
     if (container == null) return;
 
     await _ref.read(databaseProvider).close();
+    // ActiveContainerContext ET state DOIVENT être vidés AVANT
+    // d'invalider databaseProvider : si un écran l'observe encore à cet
+    // instant, l'invalidation le reconstruit immédiatement (pas
+    // paresseusement), et il ne doit jamais pouvoir repointer sur le
+    // dossier de travail de [container] pendant que la ligne suivante
+    // s'apprête à le supprimer.
+    ActiveContainerContext.definir(null);
+    state = null;
     _ref.invalidate(databaseProvider);
 
     await MstkContainerService.fermer(container);
-    ActiveContainerContext.definir(null);
-    state = null;
     _ref.read(sessionProvider.notifier).logout();
   }
 
