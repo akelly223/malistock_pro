@@ -51,6 +51,7 @@ dependencies:
 
   # Icônes
   cupertino_icons: ^1.0.8
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:

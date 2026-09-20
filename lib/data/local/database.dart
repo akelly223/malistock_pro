@@ -109,13 +109,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
           _log('onCreate → schemaVersion $schemaVersion : création de toutes les tables');
           await m.createAll();
+          await _creerIndexesPerformance();
           _log('onCreate terminé avec succès');
         },
 
@@ -453,6 +454,12 @@ class AppDatabase extends _$AppDatabase {
                 'UPDATE depot_vente_reglements SET montant_du = montant_paye WHERE montant_du = 0');
           }
 
+          if (from < 20) {
+            _log('Migration v20 : index de performance (tableau de bord '
+                'et écrans listant des documents/lignes)');
+            await _creerIndexesPerformance();
+          }
+
           _log('Migration v$from → v$to terminée avec succès');
         },
 
@@ -489,6 +496,51 @@ class AppDatabase extends _$AppDatabase {
     } else {
       await customStatement(sql);
       _log('  colonne "$table.$colonne" ajoutée');
+    }
+  }
+
+  /// Index sur les colonnes utilisées dans les jointures/filtres des
+  /// requêtes les plus répétées (tableau de bord). `IF NOT EXISTS` :
+  /// idempotent, sûr à rejouer sur une base où certains index
+  /// existeraient déjà.
+  Future<void> _creerIndexesPerformance() async {
+    const index = <String, String>{
+      'ix_document_lines_document_id':
+          'CREATE INDEX IF NOT EXISTS ix_document_lines_document_id ON document_lines(document_id)',
+      'ix_document_lines_article_id':
+          'CREATE INDEX IF NOT EXISTS ix_document_lines_article_id ON document_lines(article_id)',
+      'ix_commercial_documents_type_statut':
+          'CREATE INDEX IF NOT EXISTS ix_commercial_documents_type_statut ON commercial_documents(type, statut)',
+      'ix_commercial_documents_date_creation':
+          'CREATE INDEX IF NOT EXISTS ix_commercial_documents_date_creation ON commercial_documents(date_creation)',
+      'ix_commercial_documents_client_id':
+          'CREATE INDEX IF NOT EXISTS ix_commercial_documents_client_id ON commercial_documents(client_id)',
+      'ix_invoice_items_invoice_id':
+          'CREATE INDEX IF NOT EXISTS ix_invoice_items_invoice_id ON invoice_items(invoice_id)',
+      'ix_invoice_items_article_id':
+          'CREATE INDEX IF NOT EXISTS ix_invoice_items_article_id ON invoice_items(article_id)',
+      'ix_invoices_client_id':
+          'CREATE INDEX IF NOT EXISTS ix_invoices_client_id ON invoices(client_id)',
+      'ix_articles_supplier_id':
+          'CREATE INDEX IF NOT EXISTS ix_articles_supplier_id ON articles(supplier_id)',
+      'ix_articles_actif':
+          'CREATE INDEX IF NOT EXISTS ix_articles_actif ON articles(actif)',
+      'ix_suppliers_est_depot':
+          'CREATE INDEX IF NOT EXISTS ix_suppliers_est_depot ON suppliers(est_depot)',
+      'ix_purchases_date_creation_statut':
+          'CREATE INDEX IF NOT EXISTS ix_purchases_date_creation_statut ON purchases(date_creation, statut)',
+      'ix_quotes_date_creation':
+          'CREATE INDEX IF NOT EXISTS ix_quotes_date_creation ON quotes(date_creation)',
+    };
+    for (final entry in index.entries) {
+      try {
+        await customStatement(entry.value);
+        _log('  index "${entry.key}" créé (ou déjà présent)');
+      } catch (e) {
+        // Défensif : une table pas encore créée (ordre de migration sur
+        // une très vieille base) ne doit jamais faire échouer l'ouverture.
+        _log('  index "${entry.key}" ignoré ($e)');
+      }
     }
   }
 

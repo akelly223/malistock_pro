@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 
+import 'mstk_crypto_windows_native.dart';
 import 'mstk_exceptions.dart';
 import 'mstk_header.dart';
 
@@ -81,7 +82,20 @@ abstract final class MstkCrypto {
         List<int>.generate(MstkHeader.selLength, (_) => random.nextInt(256)));
   }
 
+  static Uint8List _nonceAleatoire() {
+    final random = Random.secure();
+    return Uint8List.fromList(List<int>.generate(
+        MstkHeader.nonceLength, (_) => random.nextInt(256)));
+  }
+
   /// Chiffre [clair] avec un sel/nonce générés aléatoirement.
+  ///
+  /// Sur Windows, passe par [MstkCryptoWindowsNative] (AES-GCM natif
+  /// via `bcrypt.dll`, ~45× plus rapide que l'implémentation pure Dart
+  /// de `package:cryptography`) ; ailleurs, repli sur
+  /// `package:cryptography`. Les deux implémentations sont
+  /// interopérables (AES-256-GCM standard) : un fichier chiffré par
+  /// l'une se déchiffre par l'autre.
   static Future<MstkChiffre> chiffrer(
     Uint8List clair, {
     String? motDePasse,
@@ -89,15 +103,29 @@ abstract final class MstkCrypto {
     final sel = _selAleatoire();
     final cle = await _deriverCle(motDePasse: motDePasse, sel: sel);
 
-    // Nonce omis volontairement : l'algorithme en génère un aléatoire
-    // de la bonne longueur, récupéré ensuite via `boite.nonce`.
-    final boite = await _algorithme.encrypt(clair, secretKey: cle);
+    final Uint8List nonce;
+    final Uint8List ciphertext;
+    final Uint8List tag;
+
+    if (MstkCryptoWindowsNative.disponible) {
+      nonce = _nonceAleatoire();
+      final cleBrute = Uint8List.fromList(await cle.extractBytes());
+      (ciphertext, tag) = MstkCryptoWindowsNative.chiffrer(
+          cle: cleBrute, nonce: nonce, clair: clair);
+    } else {
+      // Nonce omis volontairement : l'algorithme en génère un
+      // aléatoire de la bonne longueur, récupéré via `boite.nonce`.
+      final boite = await _algorithme.encrypt(clair, secretKey: cle);
+      nonce = Uint8List.fromList(boite.nonce);
+      ciphertext = Uint8List.fromList(boite.cipherText);
+      tag = Uint8List.fromList(boite.mac.bytes);
+    }
 
     return MstkChiffre(
       sel: sel,
-      nonce: Uint8List.fromList(boite.nonce),
-      tagAuthentification: Uint8List.fromList(boite.mac.bytes),
-      ciphertext: Uint8List.fromList(boite.cipherText),
+      nonce: nonce,
+      tagAuthentification: tag,
+      ciphertext: ciphertext,
       kdfId: _aUnMotDePasse(motDePasse)
           ? MstkHeader.kdfPbkdf2
           : MstkHeader.kdfEmbarquee,
@@ -126,6 +154,21 @@ abstract final class MstkCrypto {
       iterations:
           header.kdfIterations > 0 ? header.kdfIterations : iterationsPbkdf2,
     );
+
+    if (MstkCryptoWindowsNative.disponible) {
+      final cleBrute = Uint8List.fromList(await cle.extractBytes());
+      try {
+        return MstkCryptoWindowsNative.dechiffrer(
+          cle: cleBrute,
+          nonce: header.nonce,
+          ciphertext: ciphertext,
+          tag: header.tagAuthentification,
+        );
+      } on MstkAuthTagInvalideException {
+        throw const MstkAuthentificationException();
+      }
+    }
+
     final boite = SecretBox(
       ciphertext,
       nonce: header.nonce,
