@@ -14,19 +14,8 @@ class ArticleEntity {
   final bool actif;
   final double tauxTvaDefaut;
 
-  /// Auteur en dépôt-vente propriétaire de cet article (null si l'article
-  /// n'est pas en dépôt-vente).
-  final int? supplierId;
-  final String? supplierNom;
-
   /// Description libre optionnelle (notes, détails produit...).
   final String? description;
-
-  /// Prix affiché sur le livre en euros et taux de conversion utilisé
-  /// (dépôt-vente uniquement, calculateur du formulaire article). Null
-  /// si jamais renseigné.
-  final double? prixEuro;
-  final double? tauxConversionEuro;
 
   const ArticleEntity({
     required this.id,
@@ -41,11 +30,7 @@ class ArticleEntity {
     required this.dateCreation,
     required this.actif,
     this.tauxTvaDefaut = 18,
-    this.supplierId,
-    this.supplierNom,
     this.description,
-    this.prixEuro,
-    this.tauxConversionEuro,
   });
 
   /// Stock totalement épuisé (0 unité).

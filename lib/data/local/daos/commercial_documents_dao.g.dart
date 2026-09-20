@@ -10,7 +10,6 @@ mixin _$CommercialDocumentsDaoMixin on DatabaseAccessor<AppDatabase> {
   $CommercialDocumentsTable get commercialDocuments =>
       attachedDatabase.commercialDocuments;
   $CategoriesTable get categories => attachedDatabase.categories;
-  $SuppliersTable get suppliers => attachedDatabase.suppliers;
   $ArticlesTable get articles => attachedDatabase.articles;
   $DocumentLinesTable get documentLines => attachedDatabase.documentLines;
   $DocumentPaymentsTable get documentPayments =>

@@ -86,6 +86,7 @@ class SupplierImportExecutor implements ImportExecutor {
               telephone: tel ?? existant.telephone,
               adresse: adresse ?? existant.adresse,
               dateCreation: existant.dateCreation,
+              detteTotale: existant.detteTotale,
             ));
             updated++;
           } else {

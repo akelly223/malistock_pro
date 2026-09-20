@@ -221,48 +221,6 @@ class InvoiceRepositoryImpl implements InvoiceRepository {
         ));
       }
 
-      // Dépôt-vente : pour chaque ligne vendue dont l'article appartient
-      // à un auteur en dépôt, génère un achat fournisseur "fantôme" non
-      // payé représentant la part due à l'auteur. Contrairement à un
-      // achat normal, on insère directement via le DAO (pas de mouvement
-      // de stock ni de mise à jour de prix_achat : le stock a déjà été
-      // mouvementé par la vente ci-dessus).
-      for (final item in items) {
-        final article = await db.articlesDao.getArticleById(item.articleId);
-        if (article?.supplierId == null) continue;
-        final supplier =
-            await db.suppliersDao.getSupplierById(article!.supplierId!);
-        if (supplier == null || !supplier.estDepot) continue;
-        if (supplier.partAuteurPct <= 0) continue;
-
-        final montantDu = item.totalLigne * supplier.partAuteurPct / 100;
-        if (montantDu <= 0) continue;
-
-        final numeroDepot =
-            await db.documentCountersDao.genererProchainNumero('DEP');
-        await db.purchasesDao.createPurchaseWithItems(
-          PurchasesCompanion.insert(
-            numero: numeroDepot,
-            supplierId: supplier.id,
-            storeId: storeId,
-            userId: userId,
-            totalHt: Value(montantDu),
-            totalFinal: Value(montantDu),
-            montantPaye: const Value(0),
-            statutPaiement: const Value(DbConstants.invoiceStatusNonPaye),
-          ),
-          [
-            PurchaseItemsCompanion.insert(
-              purchaseId: 0,
-              articleId: item.articleId,
-              quantite: item.quantite,
-              prixAchatUnitaire: montantDu / item.quantite,
-              totalLigne: montantDu,
-            ),
-          ],
-        );
-      }
-
       // Enregistre le paiement initial s'il y en a un. Un reçu ne se
       // justifie que si la facture reste débitrice après ce paiement :
       // si le client règle tout dès la vente, la facture suffit comme

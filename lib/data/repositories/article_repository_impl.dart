@@ -23,11 +23,6 @@ class ArticleRepositoryImpl implements ArticleRepository {
           .nom;
       if (categorieNom != null && categorieNom.isEmpty) categorieNom = null;
     }
-    String? supplierNom;
-    if (a.supplierId != null) {
-      final supplier = await db.suppliersDao.getSupplierById(a.supplierId!);
-      supplierNom = supplier?.nom;
-    }
     return ArticleEntity(
       id: a.id,
       code: a.code,
@@ -41,19 +36,13 @@ class ArticleRepositoryImpl implements ArticleRepository {
       dateCreation: a.dateCreation,
       actif: a.actif,
       tauxTvaDefaut: a.tauxTvaDefaut,
-      supplierId: a.supplierId,
-      supplierNom: supplierNom,
       description: a.description,
-      prixEuro: a.prixEuro,
-      tauxConversionEuro: a.tauxConversionEuro,
     );
   }
 
   Future<List<ArticleEntity>> _toEntities(List<Article> list) async {
     final cats = await db.articlesDao.getAllCategories();
     final catMap = {for (final c in cats) c.id: c.nom};
-    final suppliers = await db.suppliersDao.getAllSuppliers();
-    final supplierMap = {for (final s in suppliers) s.id: s.nom};
     return list
         .map((a) => ArticleEntity(
               id: a.id,
@@ -69,11 +58,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
               dateCreation: a.dateCreation,
               actif: a.actif,
               tauxTvaDefaut: a.tauxTvaDefaut,
-              supplierId: a.supplierId,
-              supplierNom: a.supplierId != null ? supplierMap[a.supplierId] : null,
               description: a.description,
-              prixEuro: a.prixEuro,
-              tauxConversionEuro: a.tauxConversionEuro,
             ))
         .toList();
   }
@@ -118,10 +103,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
     required double prixAchat,
     required double prixVente,
     required double stockMinimum,
-    int? supplierId,
     String? description,
-    double? prixEuro,
-    double? tauxConversionEuro,
   }) {
     return db.articlesDao.createArticle(ArticlesCompanion.insert(
       code: code,
@@ -130,10 +112,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
       prixAchat: Value(prixAchat),
       prixVente: prixVente,
       stockMinimum: Value(stockMinimum),
-      supplierId: Value(supplierId),
       description: Value(description),
-      prixEuro: Value(prixEuro),
-      tauxConversionEuro: Value(tauxConversionEuro),
     ));
   }
 
@@ -151,10 +130,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
       dateCreation: article.dateCreation,
       actif: article.actif,
       tauxTvaDefaut: 18,
-      supplierId: article.supplierId,
       description: article.description,
-      prixEuro: article.prixEuro,
-      tauxConversionEuro: article.tauxConversionEuro,
     ));
   }
 

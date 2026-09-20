@@ -26,8 +26,6 @@ import 'tables/document_payments_table.dart';
 import 'tables/document_history_table.dart';
 import 'tables/drafts_table.dart';
 import 'tables/inventories_table.dart';
-import 'tables/depot_vente_reglements_table.dart';
-import 'tables/depot_vente_reglement_lignes_table.dart';
 
 import 'daos/users_dao.dart';
 import 'daos/stores_dao.dart';
@@ -82,8 +80,6 @@ part 'database.g.dart';
     Drafts,
     Inventories,
     InventoryLines,
-    DepotVenteReglements,
-    DepotVenteReglementLignes,
   ],
   daos: [
     UsersDao,
@@ -109,7 +105,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -393,71 +389,36 @@ class AppDatabase extends _$AppDatabase {
           }
 
           if (from < 18) {
-            _log('Migration v18 : historique règlements dépôt-vente + prix euro article');
-            await _creerTableSiAbsente('depot_vente_reglements',
-                () => m.createTable(depotVenteReglements));
-            await _creerTableSiAbsente('depot_vente_reglement_lignes',
-                () => m.createTable(depotVenteReglementLignes));
-
-            // Défensif : si une build de test antérieure a déjà créé
-            // depot_vente_reglements avec l'ancien schéma (montant_total,
-            // sans détail par livre), on complète sans perte de données au
-            // lieu de dupliquer la table.
-            if (await _colonneExiste('depot_vente_reglements', 'montant_total') &&
-                !await _colonneExiste('depot_vente_reglements', 'montant_paye')) {
-              await customStatement(
-                  'ALTER TABLE depot_vente_reglements RENAME COLUMN montant_total TO montant_paye');
-            }
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'montant_du',
-                'ALTER TABLE depot_vente_reglements ADD COLUMN montant_du REAL NOT NULL DEFAULT 0');
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'statut',
-                "ALTER TABLE depot_vente_reglements ADD COLUMN statut TEXT NOT NULL DEFAULT 'regle'");
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'note',
-                'ALTER TABLE depot_vente_reglements ADD COLUMN note TEXT NULL');
-            // Anciens règlements (tout-ou-rien) : montant dû = montant payé.
-            await customStatement(
-                'UPDATE depot_vente_reglements SET montant_du = montant_paye WHERE montant_du = 0');
-
+            // Historiquement cette version créait aussi le module
+            // dépôt-vente (`depot_vente_reglements` et ses colonnes) :
+            // retiré depuis (voir migration v21), donc plus rien à faire
+            // ici pour les bases qui ne l'ont jamais eu.
+            _log('Migration v18 : prix euro article');
             await _ajouterColonneSiAbsente('articles', 'prix_euro',
                 'ALTER TABLE articles ADD COLUMN prix_euro REAL NULL');
             await _ajouterColonneSiAbsente('articles', 'taux_conversion_euro',
                 'ALTER TABLE articles ADD COLUMN taux_conversion_euro REAL NULL');
           }
 
-          if (from < 19) {
-            // Répare les bases dont le user_version est déjà à 18 alors que
-            // le bloc précédent (montant_du/statut/note) n'a jamais tourné :
-            // arrivé pendant le développement de cette fonctionnalité, ce
-            // schemaVersion a pu être enregistré par une build antérieure
-            // qui créait déjà `depot_vente_reglements` (via createTable, à
-            // partir d'une définition de table plus ancienne) sans que le
-            // correctif idempotent ci-dessus ne soit encore rejoué — d'où
-            // "no such column: montant_du" malgré la présence de ce bloc.
-            _log('Migration v19 : réparation colonnes historique règlements dépôt-vente');
-            await _creerTableSiAbsente('depot_vente_reglements',
-                () => m.createTable(depotVenteReglements));
-            await _creerTableSiAbsente('depot_vente_reglement_lignes',
-                () => m.createTable(depotVenteReglementLignes));
-
-            if (await _colonneExiste('depot_vente_reglements', 'montant_total') &&
-                !await _colonneExiste('depot_vente_reglements', 'montant_paye')) {
-              await customStatement(
-                  'ALTER TABLE depot_vente_reglements RENAME COLUMN montant_total TO montant_paye');
-            }
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'montant_du',
-                'ALTER TABLE depot_vente_reglements ADD COLUMN montant_du REAL NOT NULL DEFAULT 0');
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'statut',
-                "ALTER TABLE depot_vente_reglements ADD COLUMN statut TEXT NOT NULL DEFAULT 'regle'");
-            await _ajouterColonneSiAbsente('depot_vente_reglements', 'note',
-                'ALTER TABLE depot_vente_reglements ADD COLUMN note TEXT NULL');
-            await customStatement(
-                'UPDATE depot_vente_reglements SET montant_du = montant_paye WHERE montant_du = 0');
-          }
-
           if (from < 20) {
             _log('Migration v20 : index de performance (tableau de bord '
                 'et écrans listant des documents/lignes)');
             await _creerIndexesPerformance();
+          }
+
+          if (from < 21) {
+            _log('Migration v21 : suppression du module dépôt-vente / '
+                'auteurs (fonctionnalité retirée)');
+            await _supprimerIndexSiPresent('ix_suppliers_est_depot');
+            await _supprimerIndexSiPresent('ix_articles_supplier_id');
+            await _supprimerTableSiPresente('depot_vente_reglement_lignes');
+            await _supprimerTableSiPresente('depot_vente_reglements');
+            await _supprimerColonneSiPresente('suppliers', 'est_depot');
+            await _supprimerColonneSiPresente('suppliers', 'part_auteur_pct');
+            await _supprimerColonneSiPresente('articles', 'supplier_id');
+            await _supprimerColonneSiPresente('articles', 'prix_euro');
+            await _supprimerColonneSiPresente(
+                'articles', 'taux_conversion_euro');
           }
 
           _log('Migration v$from → v$to terminée avec succès');
@@ -499,6 +460,34 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Supprime une colonne seulement si elle est présente. Nécessite
+  /// SQLite ≥ 3.35 (ALTER TABLE ... DROP COLUMN), disponible dans la
+  /// version embarquée par sqlite3_flutter_libs.
+  Future<void> _supprimerColonneSiPresente(String table, String colonne) async {
+    if (!await _colonneExiste(table, colonne)) {
+      _log('  colonne "$table.$colonne" déjà absente — sautée');
+    } else {
+      await customStatement('ALTER TABLE $table DROP COLUMN $colonne');
+      _log('  colonne "$table.$colonne" supprimée');
+    }
+  }
+
+  /// Supprime une table seulement si elle est présente.
+  Future<void> _supprimerTableSiPresente(String nomTable) async {
+    if (!await _tableExiste(nomTable)) {
+      _log('  table "$nomTable" déjà absente — sautée');
+    } else {
+      await customStatement('DROP TABLE $nomTable');
+      _log('  table "$nomTable" supprimée');
+    }
+  }
+
+  /// Supprime un index seulement s'il est présent.
+  Future<void> _supprimerIndexSiPresent(String nomIndex) async {
+    await customStatement('DROP INDEX IF EXISTS $nomIndex');
+    _log('  index "$nomIndex" supprimé (ou déjà absent)');
+  }
+
   /// Index sur les colonnes utilisées dans les jointures/filtres des
   /// requêtes les plus répétées (tableau de bord). `IF NOT EXISTS` :
   /// idempotent, sûr à rejouer sur une base où certains index
@@ -521,12 +510,8 @@ class AppDatabase extends _$AppDatabase {
           'CREATE INDEX IF NOT EXISTS ix_invoice_items_article_id ON invoice_items(article_id)',
       'ix_invoices_client_id':
           'CREATE INDEX IF NOT EXISTS ix_invoices_client_id ON invoices(client_id)',
-      'ix_articles_supplier_id':
-          'CREATE INDEX IF NOT EXISTS ix_articles_supplier_id ON articles(supplier_id)',
       'ix_articles_actif':
           'CREATE INDEX IF NOT EXISTS ix_articles_actif ON articles(actif)',
-      'ix_suppliers_est_depot':
-          'CREATE INDEX IF NOT EXISTS ix_suppliers_est_depot ON suppliers(est_depot)',
       'ix_purchases_date_creation_statut':
           'CREATE INDEX IF NOT EXISTS ix_purchases_date_creation_statut ON purchases(date_creation, statut)',
       'ix_quotes_date_creation':

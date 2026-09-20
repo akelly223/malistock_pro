@@ -16,8 +16,6 @@ enum ImportField {
   telephone,
   adresse,
   nif,
-  email,
-  limiteCredit,
 }
 
 /// Métadonnées d'un champ : libellé, obligatoire, et alias pour la
@@ -145,20 +143,6 @@ const Map<ImportField, ImportFieldMeta> importFieldMeta = {
     aliases: [
       'nif', 'identifiantfiscal', 'numerofiscal', 'fiscal',
       'numeronif', 'taxid',
-    ],
-  ),
-  ImportField.email: ImportFieldMeta(
-    label: 'E-mail',
-    aliases: [
-      'email', 'mail', 'courriel', 'emailadresse', 'adressemail',
-      'adressecourriel',
-    ],
-  ),
-  ImportField.limiteCredit: ImportFieldMeta(
-    label: 'Limite de crédit',
-    aliases: [
-      'limitecredit', 'plafond', 'creditmax', 'creditlimit',
-      'encours', 'encoursmaximal',
     ],
   ),
 };

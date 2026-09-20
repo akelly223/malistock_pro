@@ -13,7 +13,6 @@ import '../../data/repositories/purchase_repository_impl.dart';
 import '../../data/repositories/payment_repository_impl.dart';
 import '../../data/repositories/stock_repository_impl.dart';
 import '../../data/repositories/dashboard_repository_impl.dart';
-import '../../data/repositories/depot_vente_repository_impl.dart';
 import '../../data/repositories/settings_repository_impl.dart';
 import '../../data/repositories/receipt_repository_impl.dart';
 import '../../data/repositories/inventory_repository_impl.dart';
@@ -29,7 +28,6 @@ import '../../domain/repositories/purchase_repository.dart';
 import '../../domain/repositories/payment_repository.dart';
 import '../../domain/repositories/stock_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
-import '../../domain/repositories/depot_vente_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/repositories/receipt_repository.dart';
 import '../../domain/repositories/inventory_repository.dart';
@@ -85,13 +83,6 @@ final stockRepositoryProvider = Provider<StockRepository>(
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
   (ref) => DashboardRepositoryImpl(ref.watch(databaseProvider)),
-);
-
-final depotVenteRepositoryProvider = Provider<DepotVenteRepository>(
-  (ref) => DepotVenteRepositoryImpl(
-    ref.watch(databaseProvider),
-    ref.watch(paymentRepositoryProvider),
-  ),
 );
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(

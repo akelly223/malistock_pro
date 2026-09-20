@@ -57,6 +57,7 @@ class ClientImportExecutor implements ImportExecutor {
 
       final tel = _optionnel(row[ImportField.telephone]);
       final adresse = _optionnel(row[ImportField.adresse]);
+      final nif = _optionnel(row[ImportField.nif]);
 
       try {
         final existant =
@@ -67,6 +68,7 @@ class ClientImportExecutor implements ImportExecutor {
             nom: nom,
             telephone: tel,
             adresse: adresse,
+            nif: nif,
           );
           created++;
         } else {
@@ -76,6 +78,7 @@ class ClientImportExecutor implements ImportExecutor {
               nom: nom,
               telephone: tel ?? existant.telephone,
               adresse: adresse ?? existant.adresse,
+              nif: nif ?? existant.nif,
             ));
             updated++;
           } else {

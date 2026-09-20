@@ -49,8 +49,6 @@ class ImportConfig {
       ImportField.telephone,
       ImportField.adresse,
       ImportField.nif,
-      ImportField.email,
-      ImportField.limiteCredit,
     ],
     requiredFields: [ImportField.nom],
   );
@@ -63,8 +61,6 @@ class ImportConfig {
       ImportField.nom,
       ImportField.telephone,
       ImportField.adresse,
-      ImportField.nif,
-      ImportField.email,
     ],
     requiredFields: [ImportField.nom],
   );

@@ -30,10 +30,7 @@ abstract class ArticleRepository {
     required double prixAchat,
     required double prixVente,
     required double stockMinimum,
-    int? supplierId,
     String? description,
-    double? prixEuro,
-    double? tauxConversionEuro,
   });
   Future<void> updateArticle(ArticleEntity article);
 

@@ -46,7 +46,6 @@ import '../../presentation/migration/migration_hub_screen.dart';
 import '../../presentation/migration/import_wizard_screen.dart';
 import '../../presentation/inventory/inventory_list_screen.dart';
 import '../../presentation/inventory/inventory_detail_screen.dart';
-import '../../presentation/depot_vente/depot_vente_screen.dart';
 import '../../core/import/import_config.dart';
 import '../../domain/entities/document_type.dart';
 
@@ -321,11 +320,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // Dépôt-vente (auteurs / maisons d'édition)
-          GoRoute(
-            path: '/depot-vente',
-            builder: (context, state) => const DepotVenteScreen(),
-          ),
 
           // Utilisateurs (réservé admin)
           GoRoute(

@@ -186,12 +186,8 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                           children: [
                             Text(
                               supplier.estDebiteur
-                                  ? (supplier.estDepot
-                                      ? 'Solde dû au fournisseur'
-                                      : 'Montant dû')
-                                  : (supplier.estDepot
-                                      ? 'Aucun solde dû'
-                                      : 'Aucune dette'),
+                                  ? 'Montant dû'
+                                  : 'Aucune dette',
                               style: AppTextStyles.caption,
                             ),
                             Text(
@@ -203,9 +199,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                       ),
                       if (supplier.estDebiteur)
                         AppButton(
-                          label: supplier.estDepot
-                              ? 'Régler le fournisseur'
-                              : 'Enregistrer règlement',
+                          label: 'Enregistrer règlement',
                           icon: Icons.payments_outlined,
                           onPressed: () =>
                               _enregistrerPaiement(supplier.detteTotale),
@@ -229,11 +223,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                              supplier.estDepot
-                                  ? 'Total vendu (part reversée)'
-                                  : 'Total acheté',
-                              style: AppTextStyles.caption),
+                          Text('Total acheté', style: AppTextStyles.caption),
                           totalAchatsAsync.when(
                             data: (total) => Text(
                               CurrencyFormatter.format(total),
@@ -252,19 +242,12 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                Text(
-                    supplier.estDepot
-                        ? 'Historique des ventes en dépôt'
-                        : 'Historique des achats',
-                    style: AppTextStyles.h3),
+                const Text('Historique des achats', style: AppTextStyles.h3),
                 const SizedBox(height: 12),
                 purchasesAsync.when(
                   data: (purchases) {
                     if (purchases.isEmpty) {
-                      return Text(
-                          supplier.estDepot
-                              ? 'Aucune vente enregistrée pour ce fournisseur.'
-                              : 'Aucun achat enregistré.',
+                      return const Text('Aucun achat enregistré.',
                           style: AppTextStyles.caption);
                     }
                     return Column(

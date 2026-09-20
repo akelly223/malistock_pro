@@ -82,8 +82,7 @@ class MigrationHubScreen extends ConsumerWidget {
                 icon: Icons.people_alt_rounded,
                 couleur: AppColors.secondary,
                 titre: 'Importer les clients',
-                sousTitre:
-                    'Nom, téléphone, adresse, NIF, e-mail…',
+                sousTitre: 'Nom, téléphone, adresse, NIF…',
                 route: '/migration/clients',
               ),
               const SizedBox(height: 10),
@@ -91,7 +90,7 @@ class MigrationHubScreen extends ConsumerWidget {
                 icon: Icons.storefront_rounded,
                 couleur: const Color(0xFF5B63B7),
                 titre: 'Importer les fournisseurs',
-                sousTitre: 'Nom, téléphone, adresse, NIF…',
+                sousTitre: 'Nom, téléphone, adresse…',
                 route: '/migration/fournisseurs',
               ),
               const SizedBox(height: 10),

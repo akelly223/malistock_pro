@@ -6,7 +6,6 @@ import '../../domain/entities/document_input.dart';
 import '../../domain/repositories/commercial_document_repository.dart';
 import '../../domain/exceptions/document_verrouille_exception.dart';
 import '../../domain/exceptions/stock_insuffisant_exception.dart';
-import '../../core/constants/db_constants.dart';
 import '../../core/services/tva_calculation_service.dart';
 import '../../core/services/stock_impact_service.dart';
 import '../../core/services/document_transformation_service.dart';
@@ -380,58 +379,6 @@ class CommercialDocumentRepositoryImpl
             userId: userId,
           ));
         }
-      }
-
-      // Dépôt-vente : pour chaque ligne vendue dont l'article appartient
-      // à un auteur en dépôt, génère un achat fournisseur "fantôme" non
-      // payé représentant la part due à l'auteur. Contrairement à un
-      // achat normal, on insère directement via le DAO (pas de mouvement
-      // de stock ni de mise à jour de prix_achat : le stock a déjà été
-      // mouvementé par la vente ci-dessus). Basé sur le total HT de la
-      // ligne : la TVA est un impôt collecté pour l'État, pas une recette
-      // à partager avec l'auteur.
-      for (final ligne in input.lignes) {
-        final article = await _db.articlesDao.getArticleById(ligne.articleId);
-        if (article?.supplierId == null) continue;
-        final supplier =
-            await _db.suppliersDao.getSupplierById(article!.supplierId!);
-        if (supplier == null || !supplier.estDepot) continue;
-        if (supplier.partAuteurPct <= 0) continue;
-
-        final totalLigneHt = _tva
-            .calculerLigne(
-              quantite: ligne.quantite,
-              prixUnitaireHt: ligne.prixUnitaireHt,
-              tauxTva: ligne.tauxTva,
-              remiseLignePct: ligne.remiseLignePct,
-            )
-            .totalHt;
-        final montantDu = totalLigneHt * supplier.partAuteurPct / 100;
-        if (montantDu <= 0) continue;
-
-        final numeroDepot =
-            await _db.documentCountersDao.genererProchainNumero('DEP');
-        await _db.purchasesDao.createPurchaseWithItems(
-          PurchasesCompanion.insert(
-            numero: numeroDepot,
-            supplierId: supplier.id,
-            storeId: input.storeId,
-            userId: userId,
-            totalHt: Value(montantDu),
-            totalFinal: Value(montantDu),
-            montantPaye: const Value(0),
-            statutPaiement: const Value(DbConstants.invoiceStatusNonPaye),
-          ),
-          [
-            PurchaseItemsCompanion.insert(
-              purchaseId: 0,
-              articleId: ligne.articleId,
-              quantite: ligne.quantite,
-              prixAchatUnitaire: montantDu / ligne.quantite,
-              totalLigne: montantDu,
-            ),
-          ],
-        );
       }
 
       // Enregistre le paiement initial (s'il y en a un) puis calcule le

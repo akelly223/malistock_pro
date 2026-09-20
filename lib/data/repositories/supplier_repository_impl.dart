@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import '../local/database.dart';
-import '../local/tables/suppliers_table.dart';
 import '../../domain/entities/supplier.dart';
 import '../../domain/repositories/supplier_repository.dart';
 
@@ -17,8 +16,6 @@ class SupplierRepositoryImpl implements SupplierRepository {
         adresse: s.adresse,
         dateCreation: s.dateCreation,
         detteTotale: dettes[s.id] ?? 0,
-        estDepot: s.estDepot,
-        partAuteurPct: s.partAuteurPct,
       );
 
   /// Reste à payer par fournisseur, calculé en direct depuis `purchases`
@@ -72,15 +69,11 @@ class SupplierRepositoryImpl implements SupplierRepository {
     required String nom,
     String? telephone,
     String? adresse,
-    bool estDepot = false,
-    double partAuteurPct = 0,
   }) {
     return db.suppliersDao.createSupplier(SuppliersCompanion.insert(
       nom: nom,
       telephone: Value(telephone),
       adresse: Value(adresse),
-      estDepot: Value(estDepot),
-      partAuteurPct: Value(partAuteurPct),
     ));
   }
 
@@ -92,8 +85,6 @@ class SupplierRepositoryImpl implements SupplierRepository {
       telephone: supplier.telephone,
       adresse: supplier.adresse,
       dateCreation: supplier.dateCreation,
-      estDepot: supplier.estDepot,
-      partAuteurPct: supplier.partAuteurPct,
     ));
   }
 

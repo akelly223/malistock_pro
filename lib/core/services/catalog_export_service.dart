@@ -24,7 +24,6 @@ abstract final class CatalogExportService {
     'Stock minimum',
     'Stock total',
     'Taux TVA (%)',
-    'Fournisseur dépôt-vente',
     'Actif',
     'Date de création',
   ];
@@ -44,7 +43,6 @@ abstract final class CatalogExportService {
           a.stockMinimum,
           a.stockTotal,
           a.tauxTvaDefaut,
-          a.supplierNom ?? '',
           a.actif ? 'Oui' : 'Non',
           DateFormatter.formatDate(a.dateCreation),
         ],
@@ -81,8 +79,6 @@ abstract final class CatalogExportService {
     'Nom',
     'Téléphone',
     'Adresse',
-    'Dépôt-vente',
-    'Part auteur (%)',
     'Dette totale',
     'Date de création',
   ];
@@ -97,8 +93,6 @@ abstract final class CatalogExportService {
           s.nom,
           s.telephone ?? '',
           s.adresse ?? '',
-          s.estDepot ? 'Oui' : 'Non',
-          s.partAuteurPct,
           s.detteTotale,
           DateFormatter.formatDate(s.dateCreation),
         ],

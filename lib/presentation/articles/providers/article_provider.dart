@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/repository_providers.dart';
 import '../../../domain/entities/article.dart';
 import '../../../domain/entities/category.dart';
-import '../../../domain/entities/supplier.dart';
 
 final articlesListProvider =
     FutureProvider.autoDispose<List<ArticleEntity>>((ref) async {
@@ -14,15 +13,6 @@ final categoriesListProvider =
     FutureProvider.autoDispose<List<CategoryEntity>>((ref) async {
   final repo = ref.watch(articleRepositoryProvider);
   return repo.getAllCategories();
-});
-
-/// Fournisseurs marqués dépôt-vente (auteurs), pour le sélecteur
-/// "Auteur (dépôt-vente)" du formulaire article.
-final depotSuppliersProvider =
-    FutureProvider.autoDispose<List<SupplierEntity>>((ref) async {
-  final repo = ref.watch(supplierRepositoryProvider);
-  final suppliers = await repo.getAllSuppliers();
-  return suppliers.where((s) => s.estDepot).toList();
 });
 
 /// Recherche en direct pour la barre de recherche de la liste.

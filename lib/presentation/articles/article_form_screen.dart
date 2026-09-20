@@ -7,20 +7,12 @@ import '../../app/providers/repository_providers.dart';
 import '../../app/providers/session_provider.dart';
 import '../../app/providers/stock_invalidation.dart';
 import '../../core/permissions/permissions.dart';
-import '../../core/utils/currency_formatter.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/category_quick_create.dart';
 import '../../domain/entities/article.dart';
-import '../../domain/entities/supplier.dart';
 import '../../domain/repositories/article_repository.dart';
 import 'providers/article_provider.dart';
-
-/// Taux de conversion fixe utilisé pour le calculateur dépôt-vente
-/// (1 € = 655 FCFA, valeur pratique de l'utilisateur — voir
-/// [[project_depot_vente_auteurs]]). Volontairement pas le taux BCEAO
-/// exact (655,957) : c'est la valeur qu'il utilise pour ses calculs.
-const double _tauxEuroCfa = 655;
 
 class ArticleFormScreen extends ConsumerStatefulWidget {
   final int? articleId;
@@ -38,25 +30,13 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
   final _prixAchatController = TextEditingController();
   final _prixVenteController = TextEditingController();
   final _stockMinimumController = TextEditingController();
-  final _prixEuroController = TextEditingController();
   final _descriptionController = TextEditingController();
   int? _categorieId;
-  int? _supplierId;
   bool _isLoading = false;
   bool _isInitialised = false;
   ArticleEntity? _articleExistant;
 
   bool get _estEdition => widget.articleId != null;
-
-  /// Pourcentage reversé à l'auteur pour le fournisseur sélectionné
-  /// (80% par défaut si introuvable, cohérent avec le défaut du
-  /// dialogue de création fournisseur).
-  double _partAuteurPct(List<SupplierEntity> depotSuppliers, int? supplierId) {
-    for (final s in depotSuppliers) {
-      if (s.id == supplierId) return s.partAuteurPct;
-    }
-    return 80;
-  }
 
   /// Crée une nouvelle catégorie via la popup partagée et la
   /// sélectionne automatiquement pour l'article en cours.
@@ -72,7 +52,6 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
     _prixAchatController.dispose();
     _prixVenteController.dispose();
     _stockMinimumController.dispose();
-    _prixEuroController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -90,11 +69,7 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
         _prixVenteController.text = article.prixVente.toStringAsFixed(0);
         _stockMinimumController.text = article.stockMinimum.toStringAsFixed(0);
         _descriptionController.text = article.description ?? '';
-        if (article.prixEuro != null) {
-          _prixEuroController.text = article.prixEuro!.toStringAsFixed(2);
-        }
         _categorieId = article.categorieId;
-        _supplierId = article.supplierId;
         _isInitialised = true;
       });
     }
@@ -130,12 +105,6 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
     final description = _descriptionController.text.trim().isEmpty
         ? null
         : _descriptionController.text.trim();
-    final prixEuroSaisi =
-        double.tryParse(_prixEuroController.text.replaceAll(',', '.'));
-    final prixEuro = (prixEuroSaisi != null && prixEuroSaisi > 0)
-        ? prixEuroSaisi
-        : null;
-    final tauxConversionEuro = prixEuro != null ? _tauxEuroCfa : null;
 
     try {
       if (_estEdition && _articleExistant != null) {
@@ -150,10 +119,7 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
           stockTotal: _articleExistant!.stockTotal,
           dateCreation: _articleExistant!.dateCreation,
           actif: true,
-          supplierId: _supplierId,
           description: description,
-          prixEuro: prixEuro,
-          tauxConversionEuro: tauxConversionEuro,
         ));
       } else {
         await repo.createArticle(
@@ -163,10 +129,7 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
           prixAchat: prixAchat,
           prixVente: prixVente,
           stockMinimum: stockMinimum,
-          supplierId: _supplierId,
           description: description,
-          prixEuro: prixEuro,
-          tauxConversionEuro: tauxConversionEuro,
         );
       }
       ref.invalidate(articlesListProvider);
@@ -232,7 +195,6 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
   Widget build(BuildContext context) {
     if (_estEdition) _chargerArticleExistant();
     final categoriesAsync = ref.watch(categoriesListProvider);
-    final depotSuppliersAsync = ref.watch(depotSuppliersProvider);
     final utilisateur = ref.watch(sessionProvider);
     final peutVoirPrixAchat = Permissions.peutVoirPrixAchat(utilisateur);
     final peutSupprimer = Permissions.peutSupprimerArticle(utilisateur);
@@ -365,52 +327,6 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 16),
-                  depotSuppliersAsync.when(
-                    data: (depotSuppliers) {
-                      if (depotSuppliers.isEmpty &&
-                          _supplierId == null) {
-                        return const SizedBox.shrink();
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Fournisseur dépôt-vente (auteur / maison d\'édition)',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<int?>(
-                            initialValue: _supplierId,
-                            decoration: const InputDecoration(
-                                hintText: 'Aucun (article normal)'),
-                            items: [
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Aucun (article normal)'),
-                              ),
-                              ...depotSuppliers.map((s) => DropdownMenuItem<int?>(
-                                    value: s.id,
-                                    child: Text(
-                                        '${s.nom} (${s.partAuteurPct.toStringAsFixed(0)}%)'),
-                                  )),
-                            ],
-                            onChanged: modeLectureSeule
-                                ? null
-                                : (v) => setState(() => _supplierId = v),
-                          ),
-                          if (_supplierId != null && !modeLectureSeule)
-                            _CalculateurPrixEuro(
-                              controller: _prixEuroController,
-                              partAuteurPct: _partAuteurPct(
-                                  depotSuppliers, _supplierId),
-                              onPrixConverti: (cfa) => _prixVenteController
-                                  .text = cfa > 0 ? cfa.toStringAsFixed(0) : '',
-                            ),
-                        ],
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: 16),
                   Row(
                     children: [
                       // Le prix d'achat est entièrement invisible pour
@@ -477,116 +393,6 @@ class _ArticleFormScreenState extends ConsumerState<ArticleFormScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Calculateur dépôt-vente : convertit un prix affiché en euros (cas
-/// fréquent pour les livres reçus d'auteurs/maisons d'édition
-/// européennes) en FCFA au taux fixe [_tauxEuroCfa], et affiche
-/// immédiatement la part qui revient à l'auteur et celle qui reste à
-/// la librairie. But : éviter à l'utilisateur de reconvertir et
-/// recalculer à la main à chaque règlement d'auteur après une vente
-/// (voir demande utilisateur du 2026-08-17, mémoire
-/// [[project_depot_vente_auteurs]]). Purement un outil de saisie —
-/// rien ici n'est persisté, seul le prix de vente FCFA converti est
-/// reporté dans le champ "Prix de vente" du formulaire.
-class _CalculateurPrixEuro extends StatelessWidget {
-  final TextEditingController controller;
-  final double partAuteurPct;
-  final ValueChanged<double> onPrixConverti;
-
-  const _CalculateurPrixEuro({
-    required this.controller,
-    required this.partAuteurPct,
-    required this.onPrixConverti,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.euro_rounded, size: 16, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Text(
-                'Calculateur prix en euros (1 € = ${_tauxEuroCfa.toStringAsFixed(0)} FCFA)',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, color: AppColors.primary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Prix indiqué sur le livre (€)',
-              hintText: 'Ex: 18',
-              isDense: true,
-            ),
-            onChanged: (v) {
-              final euro = double.tryParse(v.replaceAll(',', '.')) ?? 0;
-              onPrixConverti(euro * _tauxEuroCfa);
-              // Force le rebuild de l'aperçu part auteur / part
-              // boutique ci-dessous sans dépendre d'un setState
-              // parent (le contrôleur notifie déjà ses listeners).
-            },
-          ),
-          const SizedBox(height: 8),
-          AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) {
-              final euro =
-                  double.tryParse(controller.text.replaceAll(',', '.')) ?? 0;
-              final totalCfa = euro * _tauxEuroCfa;
-              final partAuteur = totalCfa * partAuteurPct / 100;
-              final partBoutique = totalCfa - partAuteur;
-              if (euro <= 0) {
-                return const Text(
-                  'Saisissez le prix en euros pour voir la répartition.',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                );
-              }
-              return Wrap(
-                spacing: 20,
-                runSpacing: 6,
-                children: [
-                  _ligneRepartition('Prix converti', totalCfa),
-                  _ligneRepartition(
-                      'Part auteur (${partAuteurPct.toStringAsFixed(0)}%)',
-                      partAuteur),
-                  _ligneRepartition(
-                      'Ma part (${(100 - partAuteurPct).toStringAsFixed(0)}%)',
-                      partBoutique),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _ligneRepartition(String libelle, double montant) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(libelle,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-        Text(CurrencyFormatter.format(montant),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-      ],
     );
   }
 }

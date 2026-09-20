@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'categories_table.dart';
 import 'stores_table.dart';
-import 'suppliers_table.dart';
 
 /// Table des articles (produits vendus).
 ///
@@ -37,23 +36,8 @@ class Articles extends Table {
   /// Taux TVA par défaut pré-rempli lors de la saisie d'une ligne (0.0 ou 18.0).
   RealColumn get tauxTvaDefaut => real().withDefault(const Constant(18))();
 
-  /// Auteur en dépôt-vente propriétaire de cet article (null si l'article
-  /// n'est pas en dépôt-vente). Utilisé à la vente pour calculer la part
-  /// due à l'auteur — voir [Suppliers.estDepot] et [Suppliers.partAuteurPct].
-  IntColumn get supplierId =>
-      integer().nullable().references(Suppliers, #id)();
-
   /// Description libre optionnelle (notes, détails produit...).
   TextColumn get description => text().nullable()();
-
-  /// Prix affiché sur le livre en euros (dépôt-vente uniquement, saisi
-  /// via le calculateur du formulaire article). Null si l'article n'a
-  /// jamais eu de prix euro renseigné.
-  RealColumn get prixEuro => real().nullable()();
-
-  /// Taux de conversion euro→FCFA utilisé au moment de la saisie de
-  /// [prixEuro] (valeur pratique du commerçant, pas le taux BCEAO exact).
-  RealColumn get tauxConversionEuro => real().nullable()();
 }
 
 /// Table de répartition du stock par magasin.

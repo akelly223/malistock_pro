@@ -8,8 +8,6 @@ abstract class SupplierRepository {
     required String nom,
     String? telephone,
     String? adresse,
-    bool estDepot = false,
-    double partAuteurPct = 0,
   });
   Future<void> updateSupplier(SupplierEntity supplier);
   Future<void> deleteSupplier(int id);

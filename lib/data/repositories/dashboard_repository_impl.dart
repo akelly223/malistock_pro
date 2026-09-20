@@ -26,49 +26,34 @@ class DashboardRepositoryImpl implements DashboardRepository {
   DashboardRepositoryImpl(this.db);
 
   /// Lignes de vente unifiées V1 + V2, une ligne par ligne de document,
-  /// enrichies du statut dépôt-vente de l'article (`est_depot`) et de
-  /// son coût d'achat courant. Base commune à TOUTES les statistiques
-  /// du tableau de bord (CA, bénéfice, top articles, articles dormants,
-  /// top clients, graphiques) : ce tableau de bord ne doit refléter que
-  /// l'activité "propre" du commerçant, jamais les livres en
-  /// dépôt-vente (voir [[project_depot_vente_auteurs]]) — leur CA et
-  /// leur marge sont calculés séparément par l'Espace Dépôt-vente
-  /// (`DepotVenteRepositoryImpl`). `doc_key` préfixe l'id par sa source
-  /// (v1/v2) : les espaces d'id `invoices` et `commercial_documents`
-  /// sont indépendants et pourraient sinon collisionner dans un
-  /// `COUNT(DISTINCT ...)`.
-  static const String _lignesVenteAvecDepot = '''
+  /// enrichies du coût d'achat courant de l'article. Base commune à
+  /// TOUTES les statistiques du tableau de bord (CA, bénéfice, top
+  /// articles, articles dormants, top clients, graphiques). `doc_key`
+  /// préfixe l'id par sa source (v1/v2) : les espaces d'id `invoices`
+  /// et `commercial_documents` sont indépendants et pourraient sinon
+  /// collisionner dans un `COUNT(DISTINCT ...)`.
+  static const String _lignesVente = '''
     SELECT 'v2-' || dl.document_id AS doc_key, dl.article_id AS article_id,
            dl.quantite AS quantite, dl.total_ht AS total_ht,
            dl.total_ttc AS total_ttc, cd.date_creation AS date_vente,
-           cd.client_id AS client_id, a.prix_achat AS prix_achat,
-           CASE WHEN s.est_depot = 1 THEN 1 ELSE 0 END AS est_depot
+           cd.client_id AS client_id, a.prix_achat AS prix_achat
     FROM document_lines dl
     JOIN commercial_documents cd ON dl.document_id = cd.id
     JOIN articles a ON a.id = dl.article_id
-    LEFT JOIN suppliers s ON s.id = a.supplier_id
     WHERE cd.type IN ('facture', 'facture_comptabilisee')
       AND cd.statut != 'annule'
     UNION ALL
     SELECT 'v1-' || ii.invoice_id AS doc_key, ii.article_id AS article_id,
            ii.quantite AS quantite, ii.total_ligne AS total_ht,
            ii.total_ligne AS total_ttc, i.date_creation AS date_vente,
-           i.client_id AS client_id, a.prix_achat AS prix_achat,
-           CASE WHEN s.est_depot = 1 THEN 1 ELSE 0 END AS est_depot
+           i.client_id AS client_id, a.prix_achat AS prix_achat
     FROM invoice_items ii
     JOIN invoices i ON ii.invoice_id = i.id
     JOIN articles a ON a.id = ii.article_id
-    LEFT JOIN suppliers s ON s.id = a.supplier_id
     WHERE NOT EXISTS (
       SELECT 1 FROM commercial_documents cd2 WHERE cd2.numero = i.numero
     )
   ''';
-
-  /// Filtre à ajouter à toute requête basée sur `articles` (alias `a`)
-  /// pour exclure les livres en dépôt-vente des statistiques générales.
-  static const String _excluDepotArticles =
-      "(a.supplier_id IS NULL OR a.supplier_id NOT IN "
-      "(SELECT id FROM suppliers WHERE est_depot = 1))";
 
   @override
   Future<DashboardStatsEntity> getStats(DashboardPeriode periode) async {
@@ -137,12 +122,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
     int nbClientsAvecDette = 0;
     try {
       // Reste à payer unifié V1+V2 par client (même déduplication par
-      // `numero` que `_lignesVenteAvecDepot` ci-dessous) : `clients.
-      // dette_totale` n'est plus mise à jour par le flux de vente V2
-      // ("Nouvelle vente"), donc ne peut plus servir de source pour ce
-      // total. Volontairement PAS filtré sur le dépôt-vente : une
-      // dette client reste due au commerce quel que soit l'article
-      // vendu, dépôt ou non.
+      // `numero` que `_lignesVente` ci-dessous) : `clients.dette_totale`
+      // n'est plus mise à jour par le flux de vente V2 ("Nouvelle
+      // vente"), donc ne peut plus servir de source pour ce total.
       final row = await db.customSelect(
         '''
         SELECT COALESCE(SUM(reste_total), 0.0) AS t, COUNT(*) AS nb FROM (
@@ -184,7 +166,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
           COALESCE(SUM(a.stock_total * a.prix_achat), 0.0) AS valeur,
           COALESCE(SUM(CASE WHEN a.stock_total <= 0 THEN 1 ELSE 0 END), 0) AS ruptures,
           COALESCE(SUM(CASE WHEN a.stock_total > 0 AND a.stock_total <= a.stock_minimum THEN 1 ELSE 0 END), 0) AS alertes
-        FROM articles a WHERE a.actif = 1 AND $_excluDepotArticles
+        FROM articles a WHERE a.actif = 1
       ''').getSingle();
       nombreArticles = (row.data['nb'] as int?) ?? 0;
       valeurStock = (row.data['valeur'] as num?)?.toDouble() ?? 0;
@@ -205,25 +187,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
         'SELECT COUNT(*) AS n FROM suppliers', null, null);
 
     // ── Produits en rupture / alerte (liste détaillée) ──────────────────────
-    //
-    // Filtré en Dart plutôt qu'en SQL pour ne pas toucher
-    // `ArticlesDao.getLowStockArticles`, partagé avec l'écran Alertes
-    // (qui, lui, doit continuer à alerter sur TOUS les articles, dépôt
-    // inclus — un stock de livres en dépôt qui s'épuise reste utile à
-    // savoir pour recontacter l'auteur/l'éditeur).
 
-    final depotSupplierIdsRows = await db
-        .customSelect('SELECT id FROM suppliers WHERE est_depot = 1')
-        .get();
-    final depotSupplierIds = depotSupplierIdsRows
-        .map((r) => r.data['id'] as int)
-        .toSet();
-
-    final articlesAlerteRaw = (await db.articlesDao.getLowStockArticles())
-        .where((a) =>
-            a.supplierId == null || !depotSupplierIds.contains(a.supplierId))
-        .toList();
-    final produitsEnRupture = articlesAlerteRaw
+    final produitsEnRupture = (await db.articlesDao.getLowStockArticles())
         .map((a) => ArticleEntity(
               id: a.id,
               code: a.code,
@@ -246,10 +211,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
         '''
         SELECT l.article_id, a.nom,
                SUM(l.quantite) AS qte, SUM(l.total_ht) AS total
-        FROM ($_lignesVenteAvecDepot) l
+        FROM ($_lignesVente) l
         JOIN articles a ON a.id = l.article_id
-        WHERE l.est_depot = 0
-          AND l.date_vente >= ? AND l.date_vente < ?
+        WHERE l.date_vente >= ? AND l.date_vente < ?
         GROUP BY l.article_id
         ORDER BY qte DESC
         LIMIT 10
@@ -278,9 +242,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
         SELECT l.client_id, c.nom,
                SUM(l.total_ttc) AS total, COUNT(DISTINCT l.doc_key) AS nb,
                COALESCE(c.dette_totale, 0.0) AS dette
-        FROM ($_lignesVenteAvecDepot) l
+        FROM ($_lignesVente) l
         JOIN clients c ON c.id = l.client_id
-        WHERE l.est_depot = 0 AND l.client_id IS NOT NULL
+        WHERE l.client_id IS NOT NULL
           AND l.date_vente >= ? AND l.date_vente < ?
         GROUP BY l.client_id
         ORDER BY total DESC
@@ -314,9 +278,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
         FROM articles a
         WHERE a.actif = 1
           AND a.stock_total > 0
-          AND $_excluDepotArticles
           AND a.id NOT IN (
-            SELECT DISTINCT article_id FROM ($_lignesVenteAvecDepot)
+            SELECT DISTINCT article_id FROM ($_lignesVente)
             WHERE date_vente >= ?
           )
         ORDER BY a.nom
@@ -446,15 +409,14 @@ class DashboardRepositoryImpl implements DashboardRepository {
     return r.$1;
   }
 
-  /// Retourne (montant total, nombre de ventes) pour l'intervalle donné,
-  /// hors dépôt-vente.
+  /// Retourne (montant total, nombre de ventes) pour l'intervalle donné.
   Future<(double, int)> _ventesEtCompte(DateTime debut, DateTime fin) async {
     try {
       final row = await db.customSelect(
         '''
         SELECT COALESCE(SUM(l.total_ttc), 0.0) AS t, COUNT(DISTINCT l.doc_key) AS n
-        FROM ($_lignesVenteAvecDepot) l
-        WHERE l.est_depot = 0 AND l.date_vente >= ? AND l.date_vente < ?
+        FROM ($_lignesVente) l
+        WHERE l.date_vente >= ? AND l.date_vente < ?
         ''',
         variables: [
           Variable.withInt(_epochSecondes(debut)),
@@ -508,8 +470,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
       final row = await db.customSelect(
         '''
         SELECT COALESCE(SUM(l.total_ht - (l.prix_achat * l.quantite)), 0.0) AS marge
-        FROM ($_lignesVenteAvecDepot) l
-        WHERE l.est_depot = 0 AND l.date_vente >= ? AND l.date_vente < ?
+        FROM ($_lignesVente) l
+        WHERE l.date_vente >= ? AND l.date_vente < ?
         ''',
         variables: [
           Variable.withInt(_epochSecondes(debut)),
@@ -549,8 +511,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
       final rows = await db.customSelect(
         '''
         SELECT l.date_vente AS date_vente, l.total_ttc AS montant
-        FROM ($_lignesVenteAvecDepot) l
-        WHERE l.est_depot = 0 AND l.date_vente >= ? AND l.date_vente < ?
+        FROM ($_lignesVente) l
+        WHERE l.date_vente >= ? AND l.date_vente < ?
         ''',
         variables: [
           Variable.withInt(_epochSecondes(debut)),
