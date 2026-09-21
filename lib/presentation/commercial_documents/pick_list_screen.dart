@@ -65,7 +65,7 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
     final motifCtrl = TextEditingController();
     final confirmer = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Annuler cette préparation ?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -83,11 +83,11 @@ class _PickListScreenState extends ConsumerState<PickListScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Non'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Oui, annuler',
                 style: TextStyle(color: AppColors.danger)),
           ),

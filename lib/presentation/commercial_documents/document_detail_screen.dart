@@ -263,7 +263,7 @@ class _DocumentDetailScreenState
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Motif d\'annulation'),
         content: TextField(
           controller: ctrl,
@@ -273,7 +273,7 @@ class _DocumentDetailScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Annuler'),
           ),
           AppButton(
@@ -281,7 +281,7 @@ class _DocumentDetailScreenState
             isDanger: true,
             onPressed: () {
               final motif = ctrl.text.trim();
-              if (motif.isNotEmpty) Navigator.of(context).pop(motif);
+              if (motif.isNotEmpty) Navigator.of(dialogContext).pop(motif);
             },
           ),
         ],
