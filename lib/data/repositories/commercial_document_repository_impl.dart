@@ -510,13 +510,18 @@ class CommercialDocumentRepositoryImpl
     await _db.transaction(() async {
       // Si BL validé annulé → reverse le stock.
       final type = DocumentType.fromCode(row.type);
-      if (row.statut == DocumentStatut.valide.code &&
-          type.impacteStockValidation) {
+      if (row.statut == DocumentStatut.valide.code) {
         final entity = await _toEntity(row);
-        if (type.estSortieStock) {
-          await _stock.reverserSortieBonLivraison(entity, userId);
+        if (type.impacteStockValidation) {
+          if (type.estSortieStock) {
+            await _stock.reverserSortieBonLivraison(entity, userId);
+          }
+          // BR annulé avant de créer un avoir : pas de reverse (rare)
+        } else {
+          // Vente comptoir directe (creerVenteRapide) : le stock peut
+          // avoir été décrémenté à la création, sans passer par un BL.
+          await _stock.reverserVenteDirecte(entity, userId);
         }
-        // BR annulé avant de créer un avoir : pas de reverse (rare)
       }
 
       await _db.commercialDocumentsDao.mettreAJourStatut(

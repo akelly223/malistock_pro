@@ -19,6 +19,10 @@ class StockDao extends DatabaseAccessor<AppDatabase> with _$StockDaoMixin {
             ..orderBy([(m) => OrderingTerm.desc(m.dateMouvement)]))
           .get();
 
+  Future<List<StockMovement>> getMovementsByReference(String reference) =>
+      (select(stockMovements)..where((m) => m.reference.equals(reference)))
+          .get();
+
   Future<int> createMovement(StockMovementsCompanion movement) =>
       into(stockMovements).insert(movement);
 
