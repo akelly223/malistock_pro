@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,9 +13,22 @@ final activeContainerProvider =
     StateNotifierProvider<ActiveContainerNotifier, OpenedMstkContainer?>(
         (ref) => ActiveContainerNotifier(ref));
 
+/// Délai d'inactivité après la dernière écriture avant de déclencher
+/// l'auto-sauvegarde (voir [ActiveContainerNotifier._demarrerAutosave]).
+/// Assez court pour qu'une fermeture (bouton X) tombe presque toujours
+/// après une sauvegarde déjà à jour, assez long pour ne pas rechiffrer
+/// le conteneur entier à chaque ligne d'un import de plusieurs
+/// centaines d'articles.
+const _delaiAutosave = Duration(seconds: 2);
+
 class ActiveContainerNotifier extends StateNotifier<OpenedMstkContainer?> {
   final Ref _ref;
   ActiveContainerNotifier(this._ref) : super(null);
+
+  StreamSubscription<void>? _ecouteModifications;
+  Timer? _minuteurAutosave;
+  bool _sauvegardeEnCours = false;
+  bool _autreSauvegardeDemandee = false;
 
   /// Ferme le conteneur actuellement ouvert, s'il y en a un : ferme
   /// explicitement la connexion `AppDatabase` AVANT toute manipulation
@@ -29,6 +43,7 @@ class ActiveContainerNotifier extends StateNotifier<OpenedMstkContainer?> {
     final container = state;
     if (container == null) return;
 
+    _arreterAutosave();
     await _ref.read(databaseProvider).close();
     // ActiveContainerContext ET state DOIVENT être vidés AVANT
     // d'invalider databaseProvider : si un écran l'observe encore à cet
@@ -65,6 +80,56 @@ class ActiveContainerNotifier extends StateNotifier<OpenedMstkContainer?> {
     // (ne devrait pas arriver avec la garde du routeur, mais sans
     // risque de le faire par sécurité).
     _ref.invalidate(databaseProvider);
+    _demarrerAutosave();
+  }
+
+  /// Écoute chaque écriture validée sur `AppDatabase` (`tableUpdates()`,
+  /// mécanisme natif de Drift utilisé aussi par les requêtes `.watch()`)
+  /// et programme une auto-sauvegarde après [_delaiAutosave] d'accalmie.
+  /// Redémarré depuis zéro à chaque nouvelle écriture : un import de
+  /// nombreux articles ne déclenche qu'UNE sauvegarde, juste après la
+  /// dernière ligne, jamais une par ligne.
+  void _demarrerAutosave() {
+    _ecouteModifications?.cancel();
+    _ecouteModifications =
+        _ref.read(databaseProvider).tableUpdates().listen((_) {
+      _minuteurAutosave?.cancel();
+      _minuteurAutosave = Timer(_delaiAutosave, _declencherAutosave);
+    });
+  }
+
+  void _arreterAutosave() {
+    _ecouteModifications?.cancel();
+    _ecouteModifications = null;
+    _minuteurAutosave?.cancel();
+    _minuteurAutosave = null;
+    _autreSauvegardeDemandee = false;
+  }
+
+  Future<void> _declencherAutosave() async {
+    if (_sauvegardeEnCours) {
+      // Une sauvegarde (auto ou manuelle) est déjà en cours : on
+      // redemandera une auto-sauvegarde juste après, plutôt que de
+      // lancer deux réécritures concurrentes du même fichier.
+      _autreSauvegardeDemandee = true;
+      return;
+    }
+    _sauvegardeEnCours = true;
+    try {
+      await sauvegarder();
+    } catch (_) {
+      // Best-effort et silencieux : une auto-sauvegarde en tâche de
+      // fond ne doit jamais interrompre l'utilisateur. La sauvegarde
+      // manuelle (menu Fichier) et la fermeture de fenêtre
+      // (`CloseSaveGuard`) resignalent l'erreur explicitement si elle
+      // persiste.
+    } finally {
+      _sauvegardeEnCours = false;
+      if (_autreSauvegardeDemandee) {
+        _autreSauvegardeDemandee = false;
+        _minuteurAutosave = Timer(_delaiAutosave, _declencherAutosave);
+      }
+    }
   }
 
   /// Enregistre le conteneur ouvert sur disque (rechiffrement),
@@ -76,6 +141,20 @@ class ActiveContainerNotifier extends StateNotifier<OpenedMstkContainer?> {
     await _ref.read(databaseProvider).customStatement('PRAGMA wal_checkpoint(FULL)');
     await MstkContainerService.sauvegarder(container,
         nouveauMotDePasse: nouveauMotDePasse);
+  }
+
+  /// Sauvegarde finale appelée par `CloseSaveGuard` juste avant de
+  /// fermer réellement la fenêtre. Annule le minuteur d'auto-sauvegarde
+  /// (devenu inutile) et attend qu'une auto-sauvegarde déjà en vol se
+  /// termine avant d'en lancer une autre, pour ne jamais avoir deux
+  /// réécritures concurrentes du même fichier `.mstk`.
+  Future<void> sauvegarderPourFermeture() async {
+    _minuteurAutosave?.cancel();
+    _minuteurAutosave = null;
+    while (_sauvegardeEnCours) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    await sauvegarder();
   }
 
   /// Enregistre une copie du conteneur ouvert à un autre emplacement,

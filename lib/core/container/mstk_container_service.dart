@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:path/path.dart' as p;
 
 import 'mstk_crypto.dart';
@@ -83,16 +84,14 @@ abstract final class MstkContainerService {
       await verrou.setPosition(0);
       final octets = Uint8List.fromList(await verrou.read(taille));
 
-      final header = MstkHeader.decode(octets);
-      final ciphertext = octets.sublist(MstkHeader.headerLength);
-      final zipBytes = await MstkCrypto.dechiffrer(
-        header: header,
-        ciphertext: ciphertext,
-        motDePasse: motDePasse,
-      );
-
       dossier = await TempWorkspaceService.creerDossier();
-      _extraireZip(zipBytes, dossier);
+      // Déchiffrement (PBKDF2 potentiellement lent en pur Dart, voir
+      // MstkCrypto) + extraction du zip sur un isolate séparé, pour ne
+      // jamais geler l'UI le temps de l'ouverture.
+      await compute(
+        _dechiffrerEtExtraireEnArrierePlan,
+        _ParametresLecture(octets, motDePasse, dossier.path),
+      );
 
       return OpenedMstkContainer._(
           fichier.path, dossier, verrou, motDePasse);
@@ -205,24 +204,15 @@ abstract final class MstkContainerService {
     required String? motDePasse,
     RandomAccessFile? remplacerFichierVerrouille,
   }) async {
-    final zipBytes = _zipperDossier(dossierSource);
-    final chiffre = await MstkCrypto.chiffrer(zipBytes, motDePasse: motDePasse);
-
-    final header = MstkHeader(
-      version: MstkHeader.currentVersion,
-      motDePasseRequis: motDePasse != null && motDePasse.isNotEmpty,
-      kdfId: chiffre.kdfId,
-      kdfIterations: chiffre.kdfIterations,
-      sel: chiffre.sel,
-      nonce: chiffre.nonce,
-      taillePayload: zipBytes.length,
-      tagAuthentification: chiffre.tagAuthentification,
+    // Zip (I/O + compression synchrones) + chiffrement (PBKDF2
+    // potentiellement plusieurs secondes en pur Dart, voir MstkCrypto)
+    // sur un isolate séparé, pour ne jamais geler l'UI — en particulier
+    // l'auto-sauvegarde en tâche de fond et la fermeture de fenêtre
+    // (CloseSaveGuard) qui doivent rester instantanées côté utilisateur.
+    final octetsFichier = await compute(
+      _construireContainerEnArrierePlan,
+      _ParametresEcriture(dossierSource.path, motDePasse),
     );
-
-    final octetsFichier = Uint8List(MstkHeader.headerLength + chiffre.ciphertext.length)
-      ..setRange(0, MstkHeader.headerLength, header.encode())
-      ..setRange(MstkHeader.headerLength, MstkHeader.headerLength + chiffre.ciphertext.length,
-          chiffre.ciphertext);
 
     final cheminTmp = '$cheminDestination.tmp';
     await File(cheminTmp).writeAsBytes(octetsFichier, flush: true);
@@ -273,4 +263,81 @@ abstract final class MstkContainerService {
       }
     }
   }
+}
+
+// ─── Fonctions d'isolate séparé (requis par `compute` : uniquement des
+// fonctions top-level ou statiques, jamais des closures) ───────────
+//
+// Le zip (I/O + compression synchrones) et la dérivation de clé PBKDF2
+// (potentiellement plusieurs secondes en pur Dart, voir MstkCrypto)
+// sont les deux étapes coûteuses d'une ouverture/sauvegarde de
+// conteneur `.mstk`. Les exécuter sur l'isolate UI gèlerait
+// l'application (menu, boutons, fermeture de fenêtre...) le temps de
+// l'opération — d'où leur délégation systématique à un isolate séparé
+// via `compute`, qui ne renvoie que le résultat final (des
+// `Uint8List`, transférables sans copie profonde coûteuse).
+
+/// Paramètres de [_construireContainerEnArrierePlan] : uniquement des
+/// types simples, transférables entre isolates.
+class _ParametresEcriture {
+  final String dossierSourcePath;
+  final String? motDePasse;
+  const _ParametresEcriture(this.dossierSourcePath, this.motDePasse);
+}
+
+/// Zippe [_ParametresEcriture.dossierSourcePath] et le chiffre :
+/// retourne l'en-tête + ciphertext prêts à être écrits tels quels dans
+/// le fichier `.mstk`.
+Future<Uint8List> _construireContainerEnArrierePlan(
+    _ParametresEcriture params) async {
+  final zipBytes =
+      MstkContainerService._zipperDossier(Directory(params.dossierSourcePath));
+  final chiffre =
+      await MstkCrypto.chiffrer(zipBytes, motDePasse: params.motDePasse);
+
+  final header = MstkHeader(
+    version: MstkHeader.currentVersion,
+    motDePasseRequis:
+        params.motDePasse != null && params.motDePasse!.isNotEmpty,
+    kdfId: chiffre.kdfId,
+    kdfIterations: chiffre.kdfIterations,
+    sel: chiffre.sel,
+    nonce: chiffre.nonce,
+    taillePayload: zipBytes.length,
+    tagAuthentification: chiffre.tagAuthentification,
+  );
+
+  return Uint8List(MstkHeader.headerLength + chiffre.ciphertext.length)
+    ..setRange(0, MstkHeader.headerLength, header.encode())
+    ..setRange(MstkHeader.headerLength,
+        MstkHeader.headerLength + chiffre.ciphertext.length,
+        chiffre.ciphertext);
+}
+
+/// Paramètres de [_dechiffrerEtExtraireEnArrierePlan].
+class _ParametresLecture {
+  final Uint8List octetsFichier;
+  final String? motDePasse;
+  final String dossierDestinationPath;
+  const _ParametresLecture(
+      this.octetsFichier, this.motDePasse, this.dossierDestinationPath);
+}
+
+/// Déchiffre [_ParametresLecture.octetsFichier] et extrait le zip
+/// obtenu dans [_ParametresLecture.dossierDestinationPath]. Laisse
+/// remonter [MstkCorrompuException]/[MstkAuthentificationException]/
+/// [MstkVersionFutureException] telles quelles : ce sont de simples
+/// porteuses de données (message + éventuels champs primitifs), donc
+/// transférables entre isolates sans adaptation.
+Future<void> _dechiffrerEtExtraireEnArrierePlan(
+    _ParametresLecture params) async {
+  final header = MstkHeader.decode(params.octetsFichier);
+  final ciphertext = params.octetsFichier.sublist(MstkHeader.headerLength);
+  final zipBytes = await MstkCrypto.dechiffrer(
+    header: header,
+    ciphertext: ciphertext,
+    motDePasse: params.motDePasse,
+  );
+  MstkContainerService._extraireZip(
+      zipBytes, Directory(params.dossierDestinationPath));
 }

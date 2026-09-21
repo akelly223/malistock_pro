@@ -1,0 +1,101 @@
+Code;Famille;Désignation;PrixAchat;PrixVente;Stock
+BOI001;Boissons;Coca-Cola 33cl;450;500;120
+BOI002;Boissons;Fanta Orange 33cl;450;500;100
+BOI003;Boissons;Sprite 33cl;450;500;90
+BOI004;Boissons;Jus Pomme Ivoire 1L;900;1100;60
+BOI005;Boissons;Jus Djino Ananas 1L;850;1000;55
+BOI006;Boissons;Youki Soda 33cl;400;500;80
+BOI007;Boissons;Boisson énergisante Predator 25cl;500;650;70
+BOI008;Boissons;Malta Guinness 33cl;500;650;60
+BOI009;Boissons;Jus Tampico 1L;800;1000;50
+BOI010;Boissons;Sirop Teisseire Grenadine 75cl;1500;1900;30
+EAU001;Eaux minérales;Eau minérale Diago 1.5L;350;500;200
+EAU002;Eaux minérales;Eau minérale Diago 0.5L;150;250;300
+EAU003;Eaux minérales;Eau minérale Tolo 1.5L;320;450;150
+EAU004;Eaux minérales;Sachet eau pure 500ml (pack de 20);1200;1800;80
+EAU005;Eaux minérales;Eau minérale Awa 1L;300;450;120
+RIZ001;Riz & Céréales;Riz parfumé Faranfasi 25kg;13500;15000;40
+RIZ002;Riz & Céréales;Riz local Sikasso 50kg;22000;25000;25
+RIZ003;Riz & Céréales;Mil sac 50kg;18000;20500;20
+RIZ004;Riz & Céréales;Maïs sac 50kg;16000;18500;18
+RIZ005;Riz & Céréales;Riz brisé Rico 5kg;3200;3800;35
+RIZ006;Riz & Céréales;Fonio 1kg;900;1200;25
+HUI001;Huiles & Condiments;Huile Dinor 1L;1400;1650;70
+HUI002;Huiles & Condiments;Huile Diamaor 5L;6800;7800;30
+HUI003;Huiles & Condiments;Sel iodé 1kg;250;400;100
+HUI004;Huiles & Condiments;Cube Maggi (boîte de 50);2500;3000;45
+HUI005;Huiles & Condiments;Vinaigre blanc 1L;500;650;40
+HUI006;Huiles & Condiments;Moutarde Amora 370g;900;1150;25
+HUI007;Huiles & Condiments;Mayonnaise Amora 500g;1500;1850;30
+HUI008;Huiles & Condiments;Poivre moulu (sachet 100g);500;700;40
+EPI001;Épicerie;Sucre en poudre 1kg;700;900;90
+EPI002;Épicerie;Sucre en morceaux 1kg;750;950;60
+EPI003;Épicerie;Café Dolait 200g;1200;1500;40
+EPI004;Épicerie;Thé vert de Chine (paquet);1000;1300;65
+EPI005;Épicerie;Farine de blé 1kg;500;650;80
+EPI006;Épicerie;Levure boulangère (sachet);150;250;60
+EPI007;Épicerie;Chocolat en poudre Nesquik 400g;2500;3000;30
+EPI008;Épicerie;Miel naturel 500ml;2000;2500;20
+EPI009;Épicerie;Nescafé 3en1 (boîte de 10);1500;1900;45
+EPI010;Épicerie;Bouillon cube Jumbo (boîte de 50);2400;2900;40
+LAI001;Produits laitiers;Lait concentré Nido 400g;2200;2600;55
+LAI002;Produits laitiers;Lait en poudre Vitalait 900g;4500;5200;35
+LAI003;Produits laitiers;Yaourt Jaby (pack de 4);1000;1300;50
+LAI004;Produits laitiers;Lait concentré sucré Gloria 397g;1000;1250;45
+LAI005;Produits laitiers;Fromage La Vache qui rit (boîte 8 portions);1200;1500;40
+LAI006;Produits laitiers;Beurre Président 250g;1800;2200;25
+PAT001;Pâtes & Conserves;Spaghetti Panzani 500g;600;800;70
+PAT002;Pâtes & Conserves;Tomate concentrée Djino 400g;350;500;100
+PAT003;Pâtes & Conserves;Sardines Titus (boîte);600;800;90
+PAT004;Pâtes & Conserves;Macaroni 500g;550;750;60
+PAT005;Pâtes & Conserves;Petits pois en boîte 400g;700;900;40
+PAT006;Pâtes & Conserves;Maïs doux en boîte 400g;750;950;35
+PAT007;Pâtes & Conserves;Corned-beef (boîte);1500;1850;30
+PAT008;Pâtes & Conserves;Thon à l'huile (boîte);1200;1500;45
+SNK001;Biscuits & Snacks;Langue de chat (paquet);300;450;100
+SNK002;Biscuits & Snacks;Pringles Original 40g;1200;1500;60
+SNK003;Biscuits & Snacks;Pringles Paprika 40g;1200;1500;50
+SNK004;Biscuits & Snacks;Chips Tentation Nature 100g;500;700;80
+SNK005;Biscuits & Snacks;Chips plantain (paquet);400;600;70
+SNK006;Biscuits & Snacks;Biscuits Choco Extra 200g;500;700;90
+SNK007;Biscuits & Snacks;Biscuits Petit Beurre (paquet);400;600;90
+SNK008;Biscuits & Snacks;Gâteau Cabinda (paquet);300;450;100
+SNK009;Biscuits & Snacks;Cake vanille Bonbel (part);350;500;80
+SNK010;Biscuits & Snacks;Croustillant arachide (sachet);250;400;100
+SNK011;Biscuits & Snacks;Popcorn sucré (sachet);300;450;70
+SNK012;Biscuits & Snacks;Gaufrettes Wafer (paquet);350;500;85
+CON001;Confiseries;Bonbons Fruitel (sachet);200;350;120
+CON002;Confiseries;Chewing-gum Malabar (paquet);250;400;100
+CON003;Confiseries;Chocolat Kinder Bueno;700;950;60
+CON004;Confiseries;Chocolat Cadbury (tablette);1200;1500;40
+CON005;Confiseries;Sucette Chupa Chups (unité);100;200;150
+CON006;Confiseries;Caramel mou (sachet);250;400;90
+CON007;Confiseries;Nougat artisanal (sachet);300;500;60
+CON008;Confiseries;Réglisse (sachet);200;350;80
+HYG001;Hygiène & Entretien;Savon Ivoire (pain);300;450;150
+HYG002;Hygiène & Entretien;Détergent Omo 1kg;1500;1850;60
+HYG003;Hygiène & Entretien;Papier hygiénique (pack de 4);800;1100;70
+HYG004;Hygiène & Entretien;Dentifrice Signal 100ml;700;950;65
+HYG005;Hygiène & Entretien;Brosse à dents (unité);300;500;100
+HYG006;Hygiène & Entretien;Savon liquide Dettol 250ml;1500;1900;40
+HYG007;Hygiène & Entretien;Eau de Javel 1L;500;700;60
+HYG008;Hygiène & Entretien;Crème hydratante Nivea 200ml;1800;2200;35
+HYG009;Hygiène & Entretien;Shampooing Palmer's 400ml;2000;2500;30
+HYG010;Hygiène & Entretien;Couches bébé Molfix (paquet);3500;4200;25
+FRU001;Fruits & Légumes;Bananes (régime);1500;2200;30
+FRU002;Fruits & Légumes;Oranges (kg);400;600;60
+FRU003;Fruits & Légumes;Mangues Kent (kg);500;750;50
+FRU004;Fruits & Légumes;Pommes importées (kg);1200;1600;35
+FRU005;Fruits & Légumes;Papayes (unité);300;500;40
+FRU006;Fruits & Légumes;Citrons (kg);500;700;45
+FRU007;Fruits & Légumes;Pastèque (unité);1000;1500;20
+FRU008;Fruits & Légumes;Tomates fraîches (kg);400;600;50
+FRU009;Fruits & Légumes;Oignons (kg);350;500;60
+FRU010;Fruits & Légumes;Pommes de terre (kg);400;600;55
+DIV001;Divers;Bougies (paquet de 6);250;400;80
+DIV002;Divers;Piles AA Tiger (lot de 4);500;700;60
+DIV003;Divers;Allumettes (boîte);50;100;200
+DIV004;Divers;Sachets plastiques (paquet);300;450;100
+DIV005;Divers;Cahier 100 pages;350;500;90
+DIV006;Divers;Stylo Bic (unité);75;150;200
+DIV007;Divers;Recharge téléphone Orange 1000F;950;1000;150

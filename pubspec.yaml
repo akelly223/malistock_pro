@@ -53,6 +53,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   ffi: ^2.2.0
 
+  # Interception de la fermeture de fenêtre (bouton X) pour forcer une
+  # sauvegarde du conteneur .mstk ouvert avant de quitter réellement.
+  window_manager: ^0.4.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 import 'app/app.dart';
 import 'app/providers/launch_file_provider.dart';
 import 'core/container/temp_workspace_service.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Requis par `CloseSaveGuard` (lib/presentation/container/widgets/
+  // close_save_guard.dart) pour intercepter le bouton X et forcer une
+  // sauvegarde du conteneur .mstk ouvert avant de quitter réellement.
+  await windowManager.ensureInitialized();
 
   // Sûr uniquement parce que le mutex d'instance unique (côté natif,
   // windows/runner/main.cpp) a déjà garanti qu'aucune autre instance
