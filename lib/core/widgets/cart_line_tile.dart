@@ -37,6 +37,9 @@ class _CartLineTileState extends State<CartLineTile> {
   late TextEditingController _quantiteController;
   late TextEditingController _prixController;
   late TextEditingController _remiseController;
+  late FocusNode _quantiteFocusNode;
+  late FocusNode _prixFocusNode;
+  late FocusNode _remiseFocusNode;
 
   @override
   void initState() {
@@ -49,6 +52,26 @@ class _CartLineTileState extends State<CartLineTile> {
         text: widget.item.remiseMontant == 0
             ? ''
             : widget.item.remiseMontant.toStringAsFixed(0));
+    _quantiteFocusNode =
+        _creerFocusNodeSelectionTout(_quantiteController);
+    _prixFocusNode = _creerFocusNodeSelectionTout(_prixController);
+    _remiseFocusNode = _creerFocusNodeSelectionTout(_remiseController);
+  }
+
+  /// Sélectionne tout le contenu du champ à la prise de focus : sans ça,
+  /// taper une nouvelle valeur (ex: 100) s'insère à côté de la valeur
+  /// existante au lieu de la remplacer, obligeant à corriger au clavier.
+  FocusNode _creerFocusNodeSelectionTout(TextEditingController controller) {
+    final node = FocusNode();
+    node.addListener(() {
+      if (node.hasFocus) {
+        controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: controller.text.length,
+        );
+      }
+    });
+    return node;
   }
 
   @override
@@ -69,6 +92,9 @@ class _CartLineTileState extends State<CartLineTile> {
     _quantiteController.dispose();
     _prixController.dispose();
     _remiseController.dispose();
+    _quantiteFocusNode.dispose();
+    _prixFocusNode.dispose();
+    _remiseFocusNode.dispose();
     super.dispose();
   }
 
@@ -191,6 +217,7 @@ class _CartLineTileState extends State<CartLineTile> {
                       width: 44,
                       child: TextField(
                         controller: _quantiteController,
+                        focusNode: _quantiteFocusNode,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -222,6 +249,7 @@ class _CartLineTileState extends State<CartLineTile> {
                 width: 110,
                 child: TextField(
                   controller: _prixController,
+                  focusNode: _prixFocusNode,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(labelText: 'Prix unitaire'),
@@ -233,6 +261,7 @@ class _CartLineTileState extends State<CartLineTile> {
                 width: 90,
                 child: TextField(
                   controller: _remiseController,
+                  focusNode: _remiseFocusNode,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(labelText: 'Remise'),
