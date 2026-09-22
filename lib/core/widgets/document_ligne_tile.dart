@@ -53,7 +53,13 @@ class _DocumentLigneTileState extends State<DocumentLigneTile> {
   @override
   void didUpdateWidget(DocumentLigneTile old) {
     super.didUpdateWidget(old);
-    if (old.item.input.quantite != widget.item.input.quantite) {
+    // Compare au texte affiché (déjà à jour après une frappe), pas à
+    // l'ancienne valeur du modèle : sinon ce setter réécrit le
+    // controller à chaque frappe même quand le texte est déjà bon, ce
+    // qui désynchronise la connexion clavier native et bloque la
+    // saisie après quelques chiffres (cf. cart_line_tile.dart).
+    final qteAffichee = double.tryParse(_qteCtrl.text);
+    if (qteAffichee != widget.item.input.quantite) {
       _qteCtrl.text = _input.quantite
           .toStringAsFixed(2)
           .replaceAll(RegExp(r'\.00$'), '');
