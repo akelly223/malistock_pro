@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'app/app.dart';
 import 'app/providers/launch_file_provider.dart';
+import 'app/providers/licence_provider.dart';
 import 'core/container/temp_workspace_service.dart';
+import 'core/licence/licence_config.dart';
+import 'core/licence/licence_service.dart';
+import 'core/licence/licence_write_guard.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,9 +26,28 @@ void main(List<String> args) async {
 
   final cheminLancement = args.isNotEmpty ? args.first : null;
 
+  // Essai / licence : calculé avant tout affichage pour que le verrou
+  // lecture seule (LicenceWriteGuard) soit posé avant l'ouverture d'un
+  // fichier. En cas d'erreur imprévue, on reste en essai plutôt que de
+  // bloquer un client honnête.
+  final serviceLicence = LicenceService.windows();
+  EtatLicence etatLicence;
+  try {
+    etatLicence = await serviceLicence.charger();
+  } catch (_) {
+    etatLicence = EtatLicence(
+      statut: StatutLicence.essai,
+      codePc: serviceLicence.codePc,
+      joursRestants: LicenceConfig.joursEssai,
+    );
+  }
+  LicenceWriteGuard.lectureSeule = etatLicence.lectureSeule;
+
   runApp(
     ProviderScope(
       overrides: [
+        licenceServiceProvider.overrideWithValue(serviceLicence),
+        etatLicenceInitialProvider.overrideWithValue(etatLicence),
         if (cheminLancement != null)
           launchFileProvider.overrideWithValue(cheminLancement),
       ],

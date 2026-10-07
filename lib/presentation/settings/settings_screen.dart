@@ -706,6 +706,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           ),
           const SizedBox(height: 10),
           _CarteNavigation(
+            icon: Icons.verified_rounded,
+            couleur: AppColors.success,
+            titre: 'Licence',
+            sousTitre: 'Période d\'essai, code PC, activation de la licence',
+            onTap: () => context.push('/licence'),
+          ),
+          const SizedBox(height: 10),
+          _CarteNavigation(
             icon: Icons.info_outline_rounded,
             couleur: AppColors.primary,
             titre: 'À propos de MaliStock Pro',

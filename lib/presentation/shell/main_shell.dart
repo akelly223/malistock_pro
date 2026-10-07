@@ -5,6 +5,7 @@ import 'startup_alert_trigger.dart';
 import 'auto_backup_trigger.dart';
 import 'startup_draft_checker.dart';
 import 'access_denied_trigger.dart';
+import 'licence_banner.dart';
 import 'widgets/file_menu_button.dart';
 
 /// Layout principal de l'application une fois connecté : sidebar fixe
@@ -34,7 +35,14 @@ class MainShell extends StatelessWidget {
           Row(
             children: [
               SidebarMenu(currentRoute: currentRoute),
-              Expanded(child: child),
+              Expanded(
+                child: Column(
+                  children: [
+                    const LicenceBanner(),
+                    Expanded(child: child),
+                  ],
+                ),
+              ),
             ],
           ),
           const Positioned(
@@ -51,6 +59,7 @@ class MainShell extends StatelessWidget {
           const StartupDraftChecker(),
           const AutoBackupTrigger(),
           const AccessDeniedTrigger(),
+          const LicenceBlockedTrigger(),
         ],
       ),
     );

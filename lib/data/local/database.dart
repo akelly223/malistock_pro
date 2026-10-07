@@ -4,6 +4,8 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 
+import '../../core/licence/licence_write_guard.dart';
+
 import 'tables/users_table.dart';
 import 'tables/stores_table.dart';
 import 'tables/categories_table.dart';
@@ -101,7 +103,8 @@ part 'database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  // Verrou lecture seule de fin d'essai : voir LicenceWriteGuard.
+  AppDatabase() : super(_openConnection().interceptWith(LicenceWriteGuard()));
   AppDatabase.withExecutor(QueryExecutor executor) : super(executor);
 
   @override

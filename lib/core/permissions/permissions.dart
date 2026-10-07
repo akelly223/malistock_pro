@@ -33,6 +33,7 @@ class Permissions {
     '/factures-v2',
     '/ventes',
     '/about',
+    '/licence',
   ];
 
   /// Sous-routes explicitement interdites à l'employé même si elles
@@ -54,6 +55,22 @@ class Permissions {
     if (estSousRouteInterdite) return false;
 
     return _routesAutoriseesEmploye.any((prefixe) => chemin.startsWith(prefixe));
+  }
+
+  /// Pages de saisie fermées quand l'essai est terminé (lecture seule),
+  /// pour éviter de remplir tout un formulaire impossible à enregistrer.
+  /// La fiche article (/articles/:id/edit) reste ouverte : c'est aussi
+  /// l'écran de consultation du détail d'un article. Toute écriture qui
+  /// passerait malgré tout est de toute façon refusée par
+  /// `LicenceWriteGuard` au niveau de la base.
+  static bool estPageDeSaisie(String chemin) {
+    if (chemin.startsWith('/articles/') && chemin.endsWith('/edit')) {
+      return false;
+    }
+    return chemin.endsWith('/new') ||
+        chemin.endsWith('/edit') ||
+        chemin.startsWith('/articles/import') ||
+        chemin.startsWith('/migration/');
   }
 
   static bool peutGererParametresEntreprise(UserEntity? user) =>

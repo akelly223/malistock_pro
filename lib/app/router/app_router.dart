@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/session_provider.dart';
 import '../providers/active_container_provider.dart';
+import '../providers/licence_provider.dart';
 import '../../core/permissions/permissions.dart';
 import '../../core/constants/db_constants.dart';
 import '../../presentation/shell/main_shell.dart';
+import '../../presentation/licence/licence_screen.dart';
 import '../../presentation/auth/login_screen.dart';
 import '../../presentation/container/accueil_screen.dart';
 import '../../presentation/dashboard/dashboard_screen.dart';
@@ -56,6 +58,7 @@ class _SessionRefreshListenable extends ChangeNotifier {
   _SessionRefreshListenable(Ref ref) {
     ref.listen(sessionProvider, (_, __) => notifyListeners());
     ref.listen(activeContainerProvider, (_, __) => notifyListeners());
+    ref.listen(licenceProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -114,6 +117,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         ref.read(accessDeniedRouteProvider.notifier).state =
             state.matchedLocation;
         return '/dashboard';
+      }
+
+      // Essai terminé (lecture seule) : les pages de saisie mènent à
+      // l'écran Licence qui explique comment activer, plutôt qu'à un
+      // formulaire impossible à enregistrer.
+      if (isConnecte &&
+          ref.read(licenceProvider).lectureSeule &&
+          Permissions.estPageDeSaisie(state.matchedLocation)) {
+        return '/licence';
       }
 
       return null;
@@ -331,6 +343,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/licence',
+            builder: (context, state) => const LicenceScreen(),
           ),
 
           // Migration des données
