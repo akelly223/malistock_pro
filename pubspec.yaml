@@ -1,7 +1,7 @@
 name: malistock_pro
 description: "Logiciel de gestion commerciale desktop pour commerçants - Mali"
 publish_to: 'none'
-version: 3.5.0+5
+version: 3.6.0+6
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

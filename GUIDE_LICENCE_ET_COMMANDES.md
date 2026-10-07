@@ -154,9 +154,9 @@ dart run build_runner watch --delete-conflicting-outputs
 
 | Fichier | Ligne |
 |---|---|
-| `pubspec.yaml` | `version: 3.5.0+5` (le nombre après `+` augmente de 1 à chaque version) |
-| `lib/core/constants/app_identity.dart` | `static const String version = '3.5.0';` |
-| `installer/setup.iss` | `#define MyAppVersion "3.5.0"` |
+| `pubspec.yaml` | `version: 3.6.0+6` (le nombre après `+` augmente de 1 à chaque version) |
+| `lib/core/constants/app_identity.dart` | `static const String version = '3.6.0';` |
+| `installer/setup.iss` | `#define MyAppVersion "3.6.0"` |
 
 **2. Construire l'application** (build propre, mode release) :
 

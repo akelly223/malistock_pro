@@ -11,7 +11,7 @@
 
 #define MyAppName "MaliStock Pro"
 #define MyAppShortName "MaliStock Pro"
-#define MyAppVersion "3.5.0"
+#define MyAppVersion "3.6.0"
 #define MyAppPublisher "MALI_CODE CENTER"
 #define MyAppExeName "malistock_pro.exe"
 ; Association du format de fichier de données .mstk (voir [Registry]
